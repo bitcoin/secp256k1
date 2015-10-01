@@ -607,6 +607,106 @@ static SECP256K1_INLINE void secp256k1_ge_storage_cmov(secp256k1_ge_storage *r, 
     secp256k1_fe_storage_cmov(&r->y, &a->y, flag);
 }
 
+#ifdef USE_COZ
+static void secp256k1_coz_dblu_impl_var(secp256k1_coz *r, secp256k1_coz *ra, secp256k1_fe *rzr, const secp256k1_gej *a) {
+    /* 2 mul, 4 sqr, 3 normalize, 11 mul_int/add/negate */
+    secp256k1_fe E, L, M, *S, t;
+    secp256k1_fe_sqr(&E, &a->y); /* E = y1^2 */
+    secp256k1_fe_sqr(&L, &E); /* L = y1^4 */
+    secp256k1_fe_sqr(&M, &a->x); secp256k1_fe_mul_int(&M, 3); /* M = 3*x1^2 */
+    S = &ra->x; secp256k1_fe_mul(S, &a->x, &E); secp256k1_fe_mul_int(S, 4); /* x3 = S = 4*x1*y1^2 */
+    secp256k1_fe_normalize_weak(S);
+    *rzr = a->y; secp256k1_fe_normalize_weak(rzr); secp256k1_fe_mul_int(rzr, 2); /* z2 = 2*y1*z1 (implicitly) */
+    secp256k1_fe_negate(&t, S, 1); secp256k1_fe_mul_int(&t, 2); /* t = -8*x1*y1^2 */
+    secp256k1_fe_sqr(&r->x, &M); secp256k1_fe_add(&r->x, &t); /* x2 = 9*x1^4 - 8*x1*y1^2 */
+    secp256k1_fe_negate(&t, &r->x, 5); secp256k1_fe_add(&t, S); /* t = 12*x1*y1^2 - 9*x1^4 */
+    secp256k1_fe_mul(&r->y, &M, &t); /* y2 = 36*x1^3*y1^2 - 27*x1^6 */
+    ra->y = L; secp256k1_fe_mul_int(&ra->y, 8); secp256k1_fe_normalize_weak(&ra->y); /* y3 = 8*y1^4 */
+    secp256k1_fe_negate(&t, &ra->y, 1); secp256k1_fe_add(&r->y, &t); /* y2 = 36*x1^3*y1^2 - 27*x1^6 - 8*y1^4 */
+}
+
+static void secp256k1_coz_dblu_var(secp256k1_coz *r, secp256k1_gej *ra, const secp256k1_gej *a, secp256k1_fe *rzr) {
+    ra->infinity = a->infinity;
+#ifdef VERIFY
+    r->infinity = a->infinity;
+#endif
+    if (a->infinity) {
+        return;
+    }
+    secp256k1_coz_dblu_impl_var(r, (secp256k1_coz*)ra, rzr, a);
+    secp256k1_fe_mul(&ra->z, &a->z, rzr);
+#ifdef VERIFY
+    r->z = ra->z;
+#endif
+}
+
+static void secp256k1_coz_zaddu_var(secp256k1_gej *r, secp256k1_coz *ra, secp256k1_fe *rzr, const secp256k1_gej *b) {
+    /* 5 mul, 2 sqr, 6 normalize, 12 add/negate/mul_int */
+    secp256k1_fe X1, Y1, X2, Y2, dX, dY, C, D, W1, W2, A1;
+
+#ifdef VERIFY
+    secp256k1_fe raz = ra->z, bz = b->z;
+    secp256k1_fe_normalize_var(&raz);
+    secp256k1_fe_normalize_var(&bz);
+    VERIFY_CHECK(rzr != &r->z);
+    VERIFY_CHECK((ra->infinity && b->infinity) || (!ra->infinity && !b->infinity && secp256k1_fe_equal_var(&raz, &bz)));
+#endif
+    /* Note that when b is infinity, ra is also infinity per the co-z definition */
+    r->infinity = b->infinity;
+    if (b->infinity) {
+        secp256k1_fe_set_int(rzr, 0);
+#ifdef VERIFY
+        ra->infinity = 1;
+#endif
+        return;
+    }
+
+    X1 = ra->x; secp256k1_fe_normalize_weak(&X1);
+    Y1 = ra->y; secp256k1_fe_normalize_weak(&Y1);
+    X2 = b->x; secp256k1_fe_normalize_weak(&X2);
+    Y2 = b->y; secp256k1_fe_normalize_weak(&Y2);
+
+    secp256k1_fe_negate(&dX, &X2, 1); secp256k1_fe_add(&dX, &X1);
+    secp256k1_fe_negate(&dY, &Y1, 1); secp256k1_fe_add(&dY, &Y2);
+
+    if (secp256k1_fe_normalizes_to_zero_var(&dX)) {
+        if (secp256k1_fe_normalizes_to_zero_var(&dY)) {
+            secp256k1_coz_dblu_impl_var((secp256k1_coz*)r, ra, rzr, b);
+            secp256k1_fe_mul(&r->z, &b->z, rzr);
+        } else {
+            r->infinity = 1;
+#ifdef VERIFY
+            ra->infinity = 1;
+#endif
+            secp256k1_fe_set_int(rzr, 0);
+        }
+        return;
+    }
+
+    secp256k1_fe_sqr(&C, &dX);
+    secp256k1_fe_sqr(&D, &dY);
+
+    secp256k1_fe_mul(&W1, &X1, &C); ra->x = W1;
+    secp256k1_fe_mul(&W2, &X2, &C);
+
+    secp256k1_fe_negate(&W1, &W1, 1);
+    secp256k1_fe_negate(&r->x, &W2, 1); secp256k1_fe_add(&r->x, &W1); secp256k1_fe_add(&r->x, &D);
+
+    secp256k1_fe_add(&W2, &W1);
+    secp256k1_fe_mul(&A1, &W2, &Y1); secp256k1_fe_negate(&ra->y, &A1, 1);
+
+    r->y = r->x; secp256k1_fe_add(&r->y, &W1); secp256k1_fe_mul(&r->y, &r->y, &dY);
+    secp256k1_fe_add(&r->y, &A1);
+
+    secp256k1_fe_mul(&r->z, &b->z, &dX);
+    *rzr = dX;
+#ifdef VERIFY
+    ra->z = r->z;
+    ra->infinity = r->infinity;
+#endif
+}
+#endif
+
 #ifdef USE_ENDOMORPHISM
 static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a) {
     static const secp256k1_fe beta = SECP256K1_FE_CONST(

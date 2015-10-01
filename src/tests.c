@@ -1104,6 +1104,33 @@ void test_ge(void) {
                 ge_equals_gej(&ref, &resj);
             }
 
+#ifdef USE_COZ
+            /* Test Co-Z gej + ge. */
+            if ((i1 == 0) == (i2 == 0)) {
+                /* ra is initially co-z with b (=gej[i2]). */
+                secp256k1_coz ra;
+                secp256k1_fe zr2;
+                secp256k1_fe_mul(&ra.x, &ge[i1].x, &gej[i2].z); secp256k1_fe_mul(&ra.x, &ra.x, &gej[i2].z);
+                secp256k1_fe_mul(&ra.y, &ge[i1].y, &gej[i2].z); secp256k1_fe_mul(&ra.y, &ra.y, &gej[i2].z); secp256k1_fe_mul(&ra.y, &ra.y, &gej[i2].z);
+#ifdef VERIFY
+                ra.z = gej[i2].z;
+                ra.infinity = gej[i2].infinity;
+#endif
+                secp256k1_coz_zaddu_var(&resj, &ra, &zr2, &gej[i2]);
+                ge_equals_gej(&ref, &resj); /* Check sum */
+                if (!secp256k1_gej_is_infinity(&resj)) {
+                    /* Check that ra still represents the same point, but now Co-Z with r. */
+                    secp256k1_gej ra2;
+                    secp256k1_fe zz;
+                    ra2.x = ra.x; ra2.y = ra.y; ra2.z = resj.z; ra2.infinity = resj.infinity;
+                    ge_equals_gej(&ge[i1], &ra2);
+                    /* Check that zr * b.z = r.z */
+                    secp256k1_fe_mul(&zz, &gej[i2].z, &zr2);
+                    CHECK(secp256k1_fe_equal_var(&zz, &resj.z));
+                }
+            }
+#endif
+
             /* Test gej + ge (const). */
             if (i2 != 0) {
                 /* secp256k1_gej_add_ge does not support its second argument being infinity. */
@@ -1114,6 +1141,10 @@ void test_ge(void) {
             /* Test doubling (var). */
             if ((i1 == 0 && i2 == 0) || ((i1 + 3)/4 == (i2 + 3)/4 && ((i1 + 3)%4)/2 == ((i2 + 3)%4)/2)) {
                 secp256k1_fe zr2;
+#ifdef USE_COZ
+                secp256k1_gej ra;
+                secp256k1_coz r;
+#endif
                 /* Normal doubling with Z ratio result. */
                 secp256k1_gej_double_var(&resj, &gej[i1], &zr2);
                 ge_equals_gej(&ref, &resj);
@@ -1123,6 +1154,21 @@ void test_ge(void) {
                 /* Normal doubling. */
                 secp256k1_gej_double_var(&resj, &gej[i2], NULL);
                 ge_equals_gej(&ref, &resj);
+#ifdef USE_COZ
+                /* Co-Z doubling with Z ratio result. */
+                secp256k1_coz_dblu_var(&r, &ra, &gej[i1], &zr2);
+                resj.x = r.x; resj.y = r.y; resj.z = ra.z; resj.infinity = ra.infinity;
+                ge_equals_gej(&ref, &resj);
+                ge_equals_gej(&ge[i1], &ra);
+                /* Check Z ratio. */
+                secp256k1_fe_mul(&zr2, &zr2, &gej[i1].z);
+                CHECK(resj.infinity || secp256k1_fe_equal_var(&zr2, &ra.z));
+                /* Co-Z doubling. */
+                secp256k1_coz_dblu_var(&r, &ra, &gej[i2], &zr2);
+                resj.x = r.x; resj.y = r.y; resj.z = ra.z; resj.infinity = ra.infinity;
+                ge_equals_gej(&ref, &resj);
+                ge_equals_gej(&ge[i2], &ra);
+#endif
             }
 
             /* Test adding opposites. */

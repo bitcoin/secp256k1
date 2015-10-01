@@ -118,6 +118,11 @@ AC_ARG_ENABLE(module_recovery,
     [enable_module_recovery=$enableval],
     [enable_module_recovery=no])
 
+AC_ARG_ENABLE(coz,
+    AS_HELP_STRING([--enable-coz],[enable co-z precomputation (default is no)]),
+    [use_coz=$enableval],
+    [use_coz=no])
+
 AC_ARG_WITH([field], [AS_HELP_STRING([--with-field=64bit|32bit|auto],
 [Specify Field Implementation. Default is auto])],[req_field=$withval], [req_field=auto])
 
@@ -345,13 +350,17 @@ fi
 
 AC_C_BIGENDIAN()
 
+if test x"$use_coz" = x"yes"; then
+  AC_DEFINE(USE_COZ, 1, [Define this symbol to use co-z optimization])
+fi
+
 AC_MSG_NOTICE([Using assembly optimizations: $set_asm])
 AC_MSG_NOTICE([Using field implementation: $set_field])
 AC_MSG_NOTICE([Using bignum implementation: $set_bignum])
 AC_MSG_NOTICE([Using scalar implementation: $set_scalar])
 AC_MSG_NOTICE([Using endomorphism optimizations: $use_endomorphism])
+AC_MSG_NOTICE([Using co-z precomputation optimization: $use_coz])
 AC_MSG_NOTICE([Building ECDH module: $enable_module_ecdh])
-
 AC_MSG_NOTICE([Building Schnorr signatures module: $enable_module_schnorr])
 AC_MSG_NOTICE([Building ECDSA pubkey recovery module: $enable_module_recovery])
 

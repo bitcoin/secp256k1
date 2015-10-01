@@ -8,16 +8,16 @@ compiler:
   - gcc
 env:
   global:
-    - FIELD=auto  BIGNUM=auto  SCALAR=auto  ENDOMORPHISM=no  STATICPRECOMPUTATION=yes  ASM=no  BUILD=check  EXTRAFLAGS=  HOST=  ECDH=no  schnorr=NO  RECOVERY=NO
+    - FIELD=auto  BIGNUM=auto  SCALAR=auto  ENDOMORPHISM=no  STATICPRECOMPUTATION=yes  ASM=no  COZ=no BUILD=check  EXTRAFLAGS=  HOST=  ECDH=no  schnorr=NO  RECOVERY=NO
   matrix:
     - SCALAR=32bit    RECOVERY=yes
-    - SCALAR=32bit    FIELD=32bit       ECDH=yes
+    - SCALAR=32bit    FIELD=32bit       ECDH=yes  COZ=yes
     - SCALAR=64bit
     - FIELD=64bit     RECOVERY=yes
     - FIELD=64bit     ENDOMORPHISM=yes
     - FIELD=64bit     ENDOMORPHISM=yes  ECDH=yes
     - FIELD=64bit                       ASM=x86_64
-    - FIELD=64bit     ENDOMORPHISM=yes  ASM=x86_64
+    - FIELD=64bit     ENDOMORPHISM=yes  ASM=x86_64  COZ=yes
     - FIELD=32bit     SCHNORR=yes
     - FIELD=32bit     ENDOMORPHISM=yes
     - BIGNUM=no
@@ -58,5 +58,5 @@ before_script: ./autogen.sh
 script:
  - if [ -n "$HOST" ]; then export USE_HOST="--host=$HOST"; fi
  - if [ "x$HOST" = "xi686-linux-gnu" ]; then export CC="$CC -m32"; fi
- - ./configure --enable-endomorphism=$ENDOMORPHISM --with-field=$FIELD --with-bignum=$BIGNUM --with-scalar=$SCALAR --enable-ecmult-static-precomputation=$STATICPRECOMPUTATION --enable-module-ecdh=$ECDH --enable-module-schnorr=$SCHNORR $EXTRAFLAGS $USE_HOST && make -j2 $BUILD
+ - ./configure --enable-endomorphism=$ENDOMORPHISM --enable-coz=$COZ --with-field=$FIELD --with-bignum=$BIGNUM --with-scalar=$SCALAR --enable-ecmult-static-precomputation=$STATICPRECOMPUTATION --enable-module-ecdh=$ECDH --enable-module-schnorr=$SCHNORR $EXTRAFLAGS $USE_HOST && make -j2 $BUILD
 os: linux

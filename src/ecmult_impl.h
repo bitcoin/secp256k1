@@ -33,6 +33,22 @@
  *  Prej's Z values are undefined, except for the last value.
  */
 static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, secp256k1_fe *zr, const secp256k1_gej *a) {
+#ifdef USE_COZ
+    secp256k1_coz d;
+    int i;
+
+    VERIFY_CHECK(!a->infinity);
+
+    /*
+     * Use the fast precomputation technique described in
+     * New Composite Operations and Precomputation Scheme for Elliptic Curve
+     * Cryptosystems over Prime Fields, Patrick Longa and Ali Miri.
+     * See https://eprint.iacr.org/2008/051.
+     */
+    secp256k1_coz_dblu_var(&d, &prej[0], a, &zr[0]);
+    for (i = 1; i < n; i++)
+        secp256k1_coz_zaddu_var(&prej[i], &d, &zr[i], &prej[i-1]);
+#else
     secp256k1_gej d;
     secp256k1_ge a_ge, d_ge;
     int i;
@@ -65,6 +81,7 @@ static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, sec
      * the final point's z coordinate is actually used though, so just update that.
      */
     secp256k1_fe_mul(&prej[n-1].z, &prej[n-1].z, &d.z);
+#endif
 }
 
 /** Fill a table 'pre' with precomputed odd multiples of a.
