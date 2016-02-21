@@ -185,7 +185,22 @@ static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int o
         secp256k1_fe_negate(&r->y, &r->y, 1);
     }
     return 1;
+}
 
+static void secp256k1_ge_set_xo_iso(secp256k1_ge *r, secp256k1_fe *rk, const secp256k1_fe *x) {
+    secp256k1_fe t;
+
+    secp256k1_fe_sqr(&t, x);
+    secp256k1_fe_mul(&t, &t, x);
+    secp256k1_fe_set_int(rk, 7);
+    secp256k1_fe_add(rk, &t);           /* K = X^3 + 7 (2) */
+
+    /* Perhaps redundant as the equation cannot give 0 */
+    CHECK(!secp256k1_fe_normalizes_to_zero(rk));
+
+    r->infinity = 0;
+    secp256k1_fe_mul(&r->x, rk, x);     /* r->x = K*X (1) */
+    secp256k1_fe_sqr(&r->y, rk);        /* r->y = K^2 (1) */
 }
 
 static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) {

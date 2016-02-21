@@ -13,7 +13,7 @@
 
 typedef struct {
     secp256k1_context *ctx;
-    secp256k1_pubkey pubkey;
+    unsigned char point[33];
     unsigned char scalar[32];
 } bench_ecdh_data;
 
@@ -28,11 +28,12 @@ static void bench_ecdh_setup(void* arg) {
         0xa2, 0xba, 0xd1, 0x84, 0xf8, 0x83, 0xc6, 0x9f
     };
 
-    data->ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    data->ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
     for (i = 0; i < 32; i++) {
         data->scalar[i] = i + 1;
     }
-    CHECK(secp256k1_ec_pubkey_parse(data->ctx, &data->pubkey, point, sizeof(point)) == 1);
+    CHECK(sizeof(point) == sizeof(data->point));
+    memcpy(data->point, point, sizeof(point));
 }
 
 static void bench_ecdh(void* arg) {
@@ -41,7 +42,7 @@ static void bench_ecdh(void* arg) {
     bench_ecdh_data *data = (bench_ecdh_data*)arg;
 
     for (i = 0; i < 20000; i++) {
-        CHECK(secp256k1_ecdh(data->ctx, res, &data->pubkey, data->scalar) == 1);
+        CHECK(secp256k1_ecdh_opt(data->ctx, res, data->point, sizeof(data->point), data->scalar) == 1);
     }
 }
 
