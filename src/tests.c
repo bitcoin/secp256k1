@@ -1663,9 +1663,10 @@ void test_sqrt(const secp256k1_fe *a, const secp256k1_fe *k) {
     if (k != NULL) {
         /* Check that the returned root is +/- the given known answer */
         secp256k1_fe_negate(&r2, &r1, 1);
-        secp256k1_fe_add(&r1, k); secp256k1_fe_add(&r2, k);
-        secp256k1_fe_normalize(&r1); secp256k1_fe_normalize(&r2);
-        CHECK(secp256k1_fe_is_zero(&r1) || secp256k1_fe_is_zero(&r2));
+        CHECK(check_fe_equal(k, &r1) || check_fe_equal(k, &r2));
+
+        /* Our sqrt guarantees to return the root that is itself a square */
+        CHECK(secp256k1_fe_sqrt_var(&r1, &r1) != 0);
     }
 }
 
@@ -1699,6 +1700,107 @@ void run_sqrt(void) {
             test_sqrt(&t, NULL);
             secp256k1_fe_mul(&t, &s, &ns);
             test_sqrt(&t, NULL);
+        }
+    }
+}
+
+void test_rsqrt(const secp256k1_fe *a, const secp256k1_fe *k) {
+    secp256k1_fe r1, r2;
+    int v = secp256k1_fe_rsqrt_var(&r1, &r2, a);
+    CHECK((v == 0) == (k == NULL));
+
+    secp256k1_fe_mul(&r2, &r2, a);
+    CHECK(check_fe_equal(&r1, &r2));
+
+    if (k != NULL) {
+        /* Check that the returned root is +/- the given known answer */
+        secp256k1_fe_negate(&r2, &r1, 1);
+        CHECK(check_fe_equal(k, &r1) || check_fe_equal(k, &r2));
+
+        /* Our sqrt guarantees to return the root that is itself a square */
+        CHECK(secp256k1_fe_rsqrt_var(&r1, &r2, &r1) != 0);
+    }
+}
+
+void run_rsqrt(void) {
+    secp256k1_fe ns, x, s, t;
+    int i;
+
+    /* Check sqrt(0) is 0 */
+    secp256k1_fe_set_int(&x, 0);
+    secp256k1_fe_sqr(&s, &x);
+    test_rsqrt(&s, &x);
+
+    /* Check sqrt of small squares (and their negatives) */
+    for (i = 1; i <= 100; i++) {
+        secp256k1_fe_set_int(&x, i);
+        secp256k1_fe_sqr(&s, &x);
+        test_rsqrt(&s, &x);
+        secp256k1_fe_negate(&t, &s, 1);
+        test_rsqrt(&t, NULL);
+    }
+
+    /* Consistency checks for large random values */
+    for (i = 0; i < 10; i++) {
+        int j;
+        random_fe_non_square(&ns);
+        for (j = 0; j < count; j++) {
+            random_fe(&x);
+            secp256k1_fe_sqr(&s, &x);
+            test_rsqrt(&s, &x);
+            secp256k1_fe_negate(&t, &s, 1);
+            test_rsqrt(&t, NULL);
+            secp256k1_fe_mul(&t, &s, &ns);
+            test_rsqrt(&t, NULL);
+        }
+    }
+}
+
+void test_par_rsqrt_inv(const secp256k1_fe *a, const secp256k1_fe *k) {
+    secp256k1_fe r1, r2, x, xi, t;
+    int v;
+
+    random_fe_non_zero(&x);
+    v = secp256k1_fe_par_rsqrt_inv_var(&r2, &xi, a, &x);
+    CHECK((v == 0) == (k == NULL));
+
+    /* Derive the square root from the reciprocal square root */
+    secp256k1_fe_mul(&r1, &r2, a);
+
+    if (k != NULL) {
+        /* Check that the calculated root is +/- the given known answer */
+        secp256k1_fe_negate(&t, &r1, 1);
+        CHECK(check_fe_equal(k, &r1) || check_fe_equal(k, &t));
+    }
+
+    CHECK(check_fe_inverse(&x, &xi));
+}
+
+void run_par_rsqrt_inv(void) {
+    secp256k1_fe ns, x, s, t;
+    int i;
+
+    /* Check sqrt of small squares (and their negatives) */
+    for (i = 1; i <= 100; i++) {
+        secp256k1_fe_set_int(&x, i);
+        secp256k1_fe_sqr(&s, &x);
+        test_par_rsqrt_inv(&s, &x);
+        secp256k1_fe_negate(&t, &s, 1);
+        test_par_rsqrt_inv(&t, NULL);
+    }
+
+    /* Consistency checks for large random values */
+    for (i = 0; i < 10; i++) {
+        int j;
+        random_fe_non_square(&ns);
+        for (j = 0; j < count; j++) {
+            random_fe_non_zero(&x);
+            secp256k1_fe_sqr(&s, &x);
+            test_par_rsqrt_inv(&s, &x);
+            secp256k1_fe_negate(&t, &s, 1);
+            test_par_rsqrt_inv(&t, NULL);
+            secp256k1_fe_mul(&t, &s, &ns);
+            test_par_rsqrt_inv(&t, NULL);
         }
     }
 }
@@ -4339,6 +4441,8 @@ int main(int argc, char **argv) {
     run_field_convert();
     run_sqr();
     run_sqrt();
+    run_rsqrt();
+    run_par_rsqrt_inv();
 
     /* group tests */
     run_ge();

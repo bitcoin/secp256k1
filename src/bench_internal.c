@@ -191,6 +191,26 @@ void bench_field_sqrt_var(void* arg) {
     }
 }
 
+void bench_field_rsqrt_var(void* arg) {
+    int i;
+    bench_inv_t *data = (bench_inv_t*)arg;
+
+    for (i = 0; i < 20000; i++) {
+        secp256k1_fe_rsqrt_var(&data->fe_x, &data->fe_y, &data->fe_x);
+        secp256k1_fe_add(&data->fe_x, &data->fe_y);
+    }
+}
+
+void bench_field_par_rsqrt_inv_var(void* arg) {
+    int i;
+    bench_inv_t *data = (bench_inv_t*)arg;
+
+    for (i = 0; i < 20000; i++) {
+        secp256k1_fe_par_rsqrt_inv_var(&data->fe_x, &data->fe_y, &data->fe_x, &data->fe_y);
+        secp256k1_fe_add(&data->fe_x, &data->fe_y);
+    }
+}
+
 void bench_group_double_var(void* arg) {
     int i;
     bench_inv_t *data = (bench_inv_t*)arg;
@@ -334,6 +354,8 @@ int main(int argc, char **argv) {
     if (have_flag(argc, argv, "field") || have_flag(argc, argv, "inverse")) run_benchmark("field_inverse", bench_field_inverse, bench_setup, NULL, &data, 10, 20000);
     if (have_flag(argc, argv, "field") || have_flag(argc, argv, "inverse")) run_benchmark("field_inverse_var", bench_field_inverse_var, bench_setup, NULL, &data, 10, 20000);
     if (have_flag(argc, argv, "field") || have_flag(argc, argv, "sqrt")) run_benchmark("field_sqrt_var", bench_field_sqrt_var, bench_setup, NULL, &data, 10, 20000);
+    if (have_flag(argc, argv, "field") || have_flag(argc, argv, "sqrt")) run_benchmark("field_rsqrt_var", bench_field_rsqrt_var, bench_setup, NULL, &data, 10, 20000);
+    if (have_flag(argc, argv, "field") || have_flag(argc, argv, "sqrt") || have_flag(argc, argv, "inverse")) run_benchmark("field_par_rsqrt_inv_var", bench_field_par_rsqrt_inv_var, bench_setup, NULL, &data, 10, 20000);
 
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "double")) run_benchmark("group_double_var", bench_group_double_var, bench_setup, NULL, &data, 10, 200000);
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "add")) run_benchmark("group_add_var", bench_group_add_var, bench_setup, NULL, &data, 10, 200000);

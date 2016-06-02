@@ -39,13 +39,11 @@ static void secp256k1_fe_normalize_weak(secp256k1_fe *r);
 /** Normalize a field element, without constant-time guarantee. */
 static void secp256k1_fe_normalize_var(secp256k1_fe *r);
 
-/** Verify whether a field element represents zero i.e. would normalize to a zero value. The field
- *  implementation may optionally normalize the input, but this should not be relied upon. */
-static int secp256k1_fe_normalizes_to_zero(secp256k1_fe *r);
+/** Verify whether a field element represents zero i.e. would normalize to a zero value. */
+static int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r);
 
-/** Verify whether a field element represents zero i.e. would normalize to a zero value. The field
- *  implementation may optionally normalize the input, but this should not be relied upon. */
-static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r);
+/** Verify whether a field element represents zero i.e. would normalize to a zero value. */
+static int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r);
 
 /** Set a field element equal to a small integer. Resulting field element is normalized. */
 static void secp256k1_fe_set_int(secp256k1_fe *r, int a);
@@ -88,11 +86,27 @@ static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp2
 static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a);
 
 /** If a has a square root, it is computed in r and 1 is returned. If a does not
- *  have a square root, the root of its negation is computed and 0 is returned.
+ *  have a square root, the root of -a is computed and 0 is returned.
  *  The input's magnitude can be at most 8. The output magnitude is 1 (but not
  *  guaranteed to be normalized). The result in r will always be a square
  *  itself. */
 static int secp256k1_fe_sqrt_var(secp256k1_fe *r, const secp256k1_fe *a);
+
+/** If a has a square root, the square root is computed in rs, its reciprocal square root is
+ *  calculated in rr, and 1 is returned. If a does not have a square root, the root (and recip. root)
+ *  of -a are computed and 0 is returned. The input's magnitude can be at most 8. The
+ *  outputs' magnitudes are 1 (but not guaranteed to be normalized). The result in rs will always be
+ *  a square itself. The result in rr will be a square if, and only if, a is a square.
+ */
+static int secp256k1_fe_rsqrt_var(secp256k1_fe *rs, secp256k1_fe *rr, const secp256k1_fe *a);
+
+/** Parallel reciprocal square root and inverse. Sets ri to be the (modular) inverse of b. If a has a
+ *  square root, the reciprocal of its square root is computed in rr and 1 is returned. If a does not
+ *  have a square root, the reciprocal root of -a is computed and 0 is returned. The inputs'
+ *  magnitudes can be at most 8. The outputs' magnitudes are 1 (but not guaranteed to be normalized).
+ *  The result in rr will be a square if, and only if, a is a square.
+ */
+static int secp256k1_fe_par_rsqrt_inv_var(secp256k1_fe *rr,  secp256k1_fe *ri, const secp256k1_fe *a, const secp256k1_fe *b);
 
 /** Sets a field element to be the (modular) inverse of another. Requires the input's magnitude to be
  *  at most 8. The output magnitude is 1 (but not guaranteed to be normalized). */
