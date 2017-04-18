@@ -853,30 +853,65 @@ static void secp256k1_scalar_sqr_512(uint64_t l[8], const secp256k1_scalar *a) {
     : "S"(l), "D"(a->d)
     : "rax", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "cc", "memory");
 #else
-    /* 160 bit accumulator. */
-    uint64_t c0 = 0, c1 = 0;
-    uint32_t c2 = 0;
 
-    /* l[0..7] = a[0..3] * b[0..3]. */
-    muladd_fast(a->d[0], a->d[0]);
-    extract_fast(l[0]);
-    muladd2(a->d[0], a->d[1]);
-    extract(l[1]);
-    muladd2(a->d[0], a->d[2]);
-    muladd(a->d[1], a->d[1]);
-    extract(l[2]);
-    muladd2(a->d[0], a->d[3]);
-    muladd2(a->d[1], a->d[2]);
-    extract(l[3]);
-    muladd2(a->d[1], a->d[3]);
-    muladd(a->d[2], a->d[2]);
-    extract(l[4]);
-    muladd2(a->d[2], a->d[3]);
-    extract(l[5]);
-    muladd_fast(a->d[3], a->d[3]);
-    extract_fast(l[6]);
-    VERIFY_CHECK(c1 == 0);
-    l[7] = c0;
+    const uint64_t *d = &a->d[0];
+    uint64_t d0 = d[0], d1 = d[1], d2 = d[2], d3 = d[3];
+
+    uint128_t c, u, v;
+    uint64_t w;
+
+    c    = (uint128_t)d0 * d0;
+    l[0] = (uint64_t)c; c >>= 64;
+
+    u    = (uint128_t)d0 * d1;
+    w    = (uint64_t)u; u >>= 64;
+    c   += w;
+    c   += w;
+    l[1] = (uint64_t)c; c >>= 64;
+
+    v    = (uint128_t)d1 * d1;
+    c   += (uint64_t)v; v >>= 64;
+    u   += (uint128_t)d0 * d2;
+    w    = (uint64_t)u; u >>= 64;
+    c   += w;
+    c   += w;
+    l[2] = (uint64_t)c; c >>= 64;
+
+    c   += (uint64_t)v;
+    v    = (uint128_t)d1 * d2;
+    u   += (uint128_t)d0 * d3;
+    u   += (uint64_t)v; v >>= 64;
+    w    = (uint64_t)u; u >>= 64;
+    c   += w;
+    c   += w;
+    l[3] = (uint64_t)c; c >>= 64;
+
+    u   += (uint64_t)v;
+    v    = (uint128_t)d2 * d2;
+    c   += (uint64_t)v; v >>= 64;
+    u   += (uint128_t)d1 * d3;
+    w    = (uint64_t)u; u >>= 64;
+    c   += w;
+    c   += w;
+    l[4] = (uint64_t)c; c >>= 64;
+
+    c   += (uint64_t)v;
+    u   += (uint128_t)d2 * d3;
+    w    = (uint64_t)u; u >>= 64;
+    c   += w;
+    c   += w;
+    l[5] = (uint64_t)c; c >>= 64;
+
+    v    = (uint128_t)d3 * d3;
+    c   += (uint64_t)v; v >>= 64;
+    w    = (uint64_t)u;
+    c   += w;
+    c   += w;
+    l[6] = (uint64_t)c; c >>= 64;
+
+    VERIFY_CHECK(((v + c) >> 64) == 0);
+    l[7] = (uint64_t)v + (uint64_t)c;
+
 #endif
 }
 
