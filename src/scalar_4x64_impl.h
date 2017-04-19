@@ -503,77 +503,132 @@ static void secp256k1_scalar_reduce_512(secp256k1_scalar *r, const uint64_t *l) 
     : "=g"(c)
     : "g"(p0), "g"(p1), "g"(p2), "g"(p3), "g"(p4), "D"(r), "n"(SECP256K1_N_C_0), "n"(SECP256K1_N_C_1)
     : "rax", "rdx", "r8", "r9", "r10", "cc", "memory");
-#else
-    uint128_t c;
-    uint64_t c0, c1, c2;
-    uint64_t n0 = l[4], n1 = l[5], n2 = l[6], n3 = l[7];
-    uint64_t m0, m1, m2, m3, m4, m5;
-    uint32_t m6;
-    uint64_t p0, p1, p2, p3;
-    uint32_t p4;
-
-    /* Reduce 512 bits into 385. */
-    /* m[0..6] = l[0..3] + n[0..3] * SECP256K1_N_C. */
-    c0 = l[0]; c1 = 0; c2 = 0;
-    muladd_fast(n0, SECP256K1_N_C_0);
-    extract_fast(m0);
-    sumadd_fast(l[1]);
-    muladd(n1, SECP256K1_N_C_0);
-    muladd(n0, SECP256K1_N_C_1);
-    extract(m1);
-    sumadd(l[2]);
-    muladd(n2, SECP256K1_N_C_0);
-    muladd(n1, SECP256K1_N_C_1);
-    sumadd(n0);
-    extract(m2);
-    sumadd(l[3]);
-    muladd(n3, SECP256K1_N_C_0);
-    muladd(n2, SECP256K1_N_C_1);
-    sumadd(n1);
-    extract(m3);
-    muladd(n3, SECP256K1_N_C_1);
-    sumadd(n2);
-    extract(m4);
-    sumadd_fast(n3);
-    extract_fast(m5);
-    VERIFY_CHECK(c0 <= 1);
-    m6 = c0;
-
-    /* Reduce 385 bits into 258. */
-    /* p[0..4] = m[0..3] + m[4..6] * SECP256K1_N_C. */
-    c0 = m0; c1 = 0; c2 = 0;
-    muladd_fast(m4, SECP256K1_N_C_0);
-    extract_fast(p0);
-    sumadd_fast(m1);
-    muladd(m5, SECP256K1_N_C_0);
-    muladd(m4, SECP256K1_N_C_1);
-    extract(p1);
-    sumadd(m2);
-    muladd(m6, SECP256K1_N_C_0);
-    muladd(m5, SECP256K1_N_C_1);
-    sumadd(m4);
-    extract(p2);
-    sumadd_fast(m3);
-    muladd_fast(m6, SECP256K1_N_C_1);
-    sumadd_fast(m5);
-    extract_fast(p3);
-    p4 = c0 + m6;
-    VERIFY_CHECK(p4 <= 2);
-
-    /* Reduce 258 bits into 256. */
-    /* r[0..3] = p[0..3] + p[4] * SECP256K1_N_C. */
-    c = p0 + (uint128_t)SECP256K1_N_C_0 * p4;
-    r->d[0] = c & 0xFFFFFFFFFFFFFFFFULL; c >>= 64;
-    c += p1 + (uint128_t)SECP256K1_N_C_1 * p4;
-    r->d[1] = c & 0xFFFFFFFFFFFFFFFFULL; c >>= 64;
-    c += p2 + (uint128_t)p4;
-    r->d[2] = c & 0xFFFFFFFFFFFFFFFFULL; c >>= 64;
-    c += p3;
-    r->d[3] = c & 0xFFFFFFFFFFFFFFFFULL; c >>= 64;
-#endif
 
     /* Final reduction of r. */
     secp256k1_scalar_reduce(r, c + secp256k1_scalar_check_overflow(r));
+#else
+    uint128_t c, u, v;
+    uint64_t n4 = l[4], n5 = l[5], n6 = l[6], n7 = l[7];
+    uint64_t m0, m1, m2, m3, m4, m5, m6;
+    uint64_t p0, p1, p2, p3, p4;
+
+    /* Reduce 512 bits into 385. */
+    /* m[0..6] = l[0..3] + n[0..3] * SECP256K1_N_C. */
+    c    = (uint128_t)n4 * SECP256K1_N_C_0;
+    c   += l[0];
+    m0   = (uint64_t)c; c >>= 64;
+
+    u    = (uint128_t)n4 * SECP256K1_N_C_1;
+    u   += l[1];
+    c   += (uint128_t)n5 * SECP256K1_N_C_0;
+    c   += (uint64_t)u; u >>= 64;
+    m1   = (uint64_t)c; c >>= 64;
+
+    c   += n4;
+    u   += (uint128_t)n5 * SECP256K1_N_C_1;
+    u   += l[2];
+    v    = (uint128_t)n6 * SECP256K1_N_C_0;
+    c   += (uint64_t)u; u >>= 64;
+    c   += (uint64_t)v; v >>= 64;
+    m2   = (uint64_t)c; c >>= 64;
+
+    c   += n5;
+    u   += (uint128_t)n6 * SECP256K1_N_C_1;
+    u   += l[3];
+    v   += (uint128_t)n7 * SECP256K1_N_C_0;
+    c   += (uint64_t)u; u >>= 64;
+    c   += (uint64_t)v; v >>= 64;
+    m3   = (uint64_t)c; c >>= 64;
+
+    c   += n6;
+    u   += (uint128_t)n7 * SECP256K1_N_C_1;
+    c   += (uint64_t)u; u >>= 64;
+    c   += (uint64_t)v;
+    m4   = (uint64_t)c; c >>= 64;
+
+    c   += n7;
+    c   += (uint64_t)u;
+    m5   = (uint64_t)c; c >>= 64;
+
+    /* The carry to m6 is 0 or 1, we negate it for use as a mask. */
+    m6   = -(uint64_t)c;
+    VERIFY_CHECK(-m6 <= 1);
+
+    /* Reduce 385 bits into 258. */
+    /* p[0..4] = m[0..3] + m[4..6] * SECP256K1_N_C. */
+    c    = (uint128_t)m4 * SECP256K1_N_C_0;
+    c   += m0;
+    p0   = (uint64_t)c; c >>= 64;
+
+    u    = (uint128_t)m4 * SECP256K1_N_C_1;
+    u   += m1;
+    c   += (uint128_t)m5 * SECP256K1_N_C_0;
+    c   += (uint64_t)u; u >>= 64;
+    p1   = (uint64_t)c; c >>= 64;
+
+    c   += m4;
+    u   += (uint128_t)m5 * SECP256K1_N_C_1;
+    u   += m2;
+    c   += (m6 & SECP256K1_N_C_0);
+    c   += (uint64_t)u; u >>= 64;
+    p2   = (uint64_t)c; c >>= 64;
+
+    c   += m5;
+    c   += (m6 & SECP256K1_N_C_1);
+    c   += m3;
+    c   += (uint64_t)u;
+    p3   = (uint64_t)c; c >>= 64;
+
+    p4   = (uint64_t)c - m6;;
+    VERIFY_CHECK(p4 <= 3);
+
+    /* Effectively add an extra SECP256K1_N_C during the next pass.
+     * Values that would have landed in the range [SECP256K_N, 2^256)
+     * will instead "wrap" and carry back to p4 */
+    ++p4;
+
+    /* Reduce 258 bits into 256. */
+    /* r[0..3] = p[0..3] + p[4] * SECP256K1_N_C. */
+    c    = (uint128_t)SECP256K1_N_C_0 * p4;
+    c   += p0;
+    p0   = (uint64_t)c; c >>= 64;
+    c   += (uint128_t)SECP256K1_N_C_1 * p4;
+    c   += p1;
+    p1   = (uint64_t)c; c >>= 64;
+    c   += p4;
+    c   += p2;
+    p2   = (uint64_t)c; c >>= 64;
+    c   += p3;
+    p3   = (uint64_t)c; c >>= 64;
+    VERIFY_CHECK((uint64_t)c <= 1);
+    p4   = (uint64_t)c;
+
+    /* Recover the extra SECP256K1_N_C from the previous pass.
+     * If p4 is 1, it becomes a 0 mask - the final pass is a no-op
+     * If p4 is 0, the decrement creates a UINT64_MAX mask that enables the
+     * addition of SECP256K_N in the final pass, which must result
+     * in a final carry, which balances the accounts. */
+    --p4;
+
+    c    = p4 & SECP256K1_N_0;
+    c   += p0;
+    p0   = (uint64_t)c; c >>= 64;
+    c   += p4 & SECP256K1_N_1;
+    c   += p1;
+    p1   = (uint64_t)c; c >>= 64;
+    c   += p4 & SECP256K1_N_2;
+    c   += p2;
+    p2   = (uint64_t)c; c >>= 64;
+    c   += p4 & SECP256K1_N_3;
+    c   += p3;
+    p3   = (uint64_t)c;
+    VERIFY_CHECK((uint64_t)(c >> 64) + p4 == 0);
+
+    r->d[0] = p0;
+    r->d[1] = p1;
+    r->d[2] = p2;
+    r->d[3] = p3;
+#endif
 }
 
 static void secp256k1_scalar_mul_512(uint64_t l[8], const secp256k1_scalar *a, const secp256k1_scalar *b) {
