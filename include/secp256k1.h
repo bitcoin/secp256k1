@@ -179,6 +179,9 @@ typedef int (*secp256k1_nonce_function)(
 #define SECP256K1_TAG_PUBKEY_HYBRID_EVEN 0x06
 #define SECP256K1_TAG_PUBKEY_HYBRID_ODD 0x07
 
+#define SECP256K1_TAG_AGGSIG_NONCE_EVEN 0x12
+#define SECP256K1_TAG_AGGSIG_NONCE_ODD 0x13
+
 /** Create a secp256k1 context object.
  *
  *  Returns: a newly created context object.

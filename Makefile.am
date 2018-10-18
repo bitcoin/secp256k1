@@ -181,3 +181,7 @@ endif
 if ENABLE_MODULE_RECOVERY
 include src/modules/recovery/Makefile.am.include
 endif
+
+if ENABLE_MODULE_AGGSIG
+include src/modules/aggsig/Makefile.am.include
+endif
