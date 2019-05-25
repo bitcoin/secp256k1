@@ -11,8 +11,11 @@
 #include "libsecp256k1-config.h"
 #endif
 
-#include <stdlib.h>
+/*
 #include <stdint.h>
+*/
+#include <linux/types.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 typedef struct {

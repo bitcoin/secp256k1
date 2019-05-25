@@ -8,7 +8,10 @@
 #define SECP256K1_HASH_H
 
 #include <stdlib.h>
+/*
 #include <stdint.h>
+*/
+#include <linux/types.h>
 
 typedef struct {
     uint32_t s[8];

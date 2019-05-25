@@ -1,0 +1,12 @@
+config DSA 
+	bool "Use secp256k DSA Library"
+	help
+	  DSA support. This enables the ECDSA algorithm used for FIT image
+	  verification in U-Boot.
+	  See doc/uImage.FIT/signature.txt for more details.
+if DSA
+
+config SPL_DSA
+	bool "Use DSA Library within SPL"
+
+endif

@@ -7,8 +7,11 @@
 #ifndef SECP256K1_ECMULT_IMPL_H
 #define SECP256K1_ECMULT_IMPL_H
 
+/*
 #include <string.h>
 #include <stdint.h>
+*/
+#include <linux/types.h>
 
 #include "group.h"
 #include "scalar.h"
@@ -936,7 +939,7 @@ static size_t secp256k1_pippenger_bucket_window_inv(int bucket_window) {
         case 9: return 4420;
         case 10: return 7880;
         case 11: return 16050;
-        case PIPPENGER_MAX_BUCKET_WINDOW: return SIZE_MAX;
+        case PIPPENGER_MAX_BUCKET_WINDOW: return __SIZE_MAX__;
 #else
         case 1: return 1;
         case 2: return 11;
@@ -949,7 +952,7 @@ static size_t secp256k1_pippenger_bucket_window_inv(int bucket_window) {
         case 9: return 9630;
         case 10: return 17900;
         case 11: return 32800;
-        case PIPPENGER_MAX_BUCKET_WINDOW: return SIZE_MAX;
+        case PIPPENGER_MAX_BUCKET_WINDOW: return __SIZE_MAX__;
 #endif
     }
     return 0;

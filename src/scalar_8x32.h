@@ -7,7 +7,11 @@
 #ifndef SECP256K1_SCALAR_REPR_H
 #define SECP256K1_SCALAR_REPR_H
 
+/*
 #include <stdint.h>
+*/
+#include <linux/types.h>
+
 
 /** A scalar modulo the group order of the secp256k1 curve. */
 typedef struct {
