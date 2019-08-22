@@ -413,6 +413,29 @@ static SECP256K1_INLINE void buffer_append(unsigned char *buf, unsigned int *off
     *offset += len;
 }
 
+/* This nonce function is described in BIP-schnorr
+ * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
+static int nonce_function_bipschnorr(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
+    secp256k1_sha256 sha;
+    (void) counter;
+    VERIFY_CHECK(counter == 0);
+
+    /* Hash x||msg as per the spec */
+    secp256k1_sha256_initialize(&sha);
+    secp256k1_sha256_write(&sha, key32, 32);
+    secp256k1_sha256_write(&sha, msg32, 32);
+    /* Hash in algorithm, which is not in the spec, but may be critical to
+     * users depending on it to avoid nonce reuse across algorithms. */
+    if (algo16 != NULL) {
+        secp256k1_sha256_write(&sha, algo16, 16);
+    }
+    if (data != NULL) {
+        secp256k1_sha256_write(&sha, data, 32);
+    }
+    secp256k1_sha256_finalize(&sha, nonce32);
+    return 1;
+}
+
 static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
    unsigned char keydata[112];
    unsigned int offset = 0;
@@ -443,6 +466,7 @@ static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *m
    return 1;
 }
 
+const secp256k1_nonce_function secp256k1_nonce_function_bipschnorr = nonce_function_bipschnorr;
 const secp256k1_nonce_function secp256k1_nonce_function_rfc6979 = nonce_function_rfc6979;
 const secp256k1_nonce_function secp256k1_nonce_function_default = nonce_function_rfc6979;
 
@@ -681,8 +705,148 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
     return 1;
 }
 
+/* Compute an ec commitment tweak as hash(pubkey, data). */
+static int secp256k1_ec_commit_tweak(const secp256k1_context *ctx, unsigned char *tweak32, const secp256k1_pubkey *pubkey, const unsigned char *data, size_t data_size) {
+    secp256k1_ge p;
+    unsigned char rbuf[33];
+    size_t rbuf_size = sizeof(rbuf);
+    secp256k1_sha256 sha;
+
+    if (data_size == 0) {
+        /* That's probably not what the caller wanted */
+        return 0;
+    }
+    if(!secp256k1_pubkey_load(ctx, &p, pubkey)) {
+        return 0;
+    }
+    secp256k1_eckey_pubkey_serialize(&p, rbuf, &rbuf_size, 1);
+
+    secp256k1_sha256_initialize(&sha);
+    secp256k1_sha256_write(&sha, rbuf, rbuf_size);
+    secp256k1_sha256_write(&sha, data, data_size);
+    secp256k1_sha256_finalize(&sha, tweak32);
+    return 1;
+}
+
+/* Compute an ec commitment as pubkey + hash(pubkey, data)*G. */
+static int secp256k1_ec_commit(const secp256k1_context* ctx, secp256k1_pubkey *commitment, const secp256k1_pubkey *pubkey, const unsigned char *data, size_t data_size) {
+    unsigned char tweak[32];
+
+    *commitment = *pubkey;
+    if (!secp256k1_ec_commit_tweak(ctx, tweak, commitment, data, data_size)) {
+        return 0;
+    }
+    return secp256k1_ec_pubkey_tweak_add(ctx, commitment, tweak);
+}
+
+/* Compute the seckey of an ec commitment from the original secret key of the pubkey as seckey +
+ * hash(pubkey, data). */
+static int secp256k1_ec_commit_seckey(const secp256k1_context* ctx, unsigned char *seckey, const secp256k1_pubkey *pubkey, const unsigned char *data, size_t data_size) {
+    unsigned char tweak[32];
+    secp256k1_pubkey pubkey_tmp;
+
+    if (pubkey == NULL) {
+        /* Compute pubkey from seckey if not provided */
+        int overflow;
+        secp256k1_scalar x;
+        secp256k1_gej pj;
+        secp256k1_ge p;
+
+        secp256k1_scalar_set_b32(&x, seckey, &overflow);
+        if (overflow != 0) {
+            return 0;
+        }
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pj, &x);
+        secp256k1_ge_set_gej(&p, &pj);
+        secp256k1_pubkey_save(&pubkey_tmp, &p);
+        pubkey = &pubkey_tmp;
+    }
+
+    if (!secp256k1_ec_commit_tweak(ctx, tweak, pubkey, data, data_size)) {
+        return 0;
+    }
+    return secp256k1_ec_privkey_tweak_add(ctx, seckey, tweak);
+}
+
+/* Verify an ec commitment as pubkey + hash(pubkey, data)*G ?= commitment. */
+static int secp256k1_ec_commit_verify(const secp256k1_context* ctx, const secp256k1_pubkey *commitment, const secp256k1_pubkey *pubkey, const unsigned char *data, size_t data_size) {
+    secp256k1_gej pj;
+    secp256k1_ge p;
+    secp256k1_pubkey commitment_tmp;
+
+    if (!secp256k1_ec_commit(ctx, &commitment_tmp, pubkey, data, data_size)) {
+        return 0;
+    }
+
+    /* Return commitment == commitment_tmp */
+    secp256k1_pubkey_load(ctx, &p, &commitment_tmp);
+    secp256k1_gej_set_ge(&pj, &p);
+    secp256k1_pubkey_load(ctx, &p, commitment);
+    secp256k1_ge_neg(&p, &p);
+    secp256k1_gej_add_ge_var(&pj, &pj, &p, NULL);
+    return secp256k1_gej_is_infinity(&pj);
+}
+
+static uint64_t s2c_opening_magic = 0x5d0520b8b7f2b168ULL;
+
+static void secp256k1_s2c_opening_init(secp256k1_s2c_opening *opening) {
+    opening->magic = s2c_opening_magic;
+    opening->nonce_is_negated = 0;
+}
+
+static int secp256k1_s2c_commit_is_init(const secp256k1_s2c_opening *opening) {
+    return opening->magic == s2c_opening_magic;
+}
+
+/* s2c_opening is serialized as 33 bytes containing the compressed original pubnonce. In addition to
+ * holding the EVEN or ODD tag, the first byte has the third bit set to 1 if the nonce was negated.
+ * The remaining bits in the first byte are 0. */
+int secp256k1_s2c_opening_parse(const secp256k1_context* ctx, secp256k1_s2c_opening* opening, const unsigned char *input33) {
+    unsigned char pk_ser[33];
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(opening != NULL);
+    ARG_CHECK(input33 != NULL);
+
+    secp256k1_s2c_opening_init(opening);
+    /* Return 0 if unknown bits are set */
+    if ((input33[0] & ~0x06) != 0) {
+        return 0;
+    }
+    /* Read nonce_is_negated bit */
+    opening->nonce_is_negated = input33[0] & (1 << 2);
+    memcpy(pk_ser, input33, sizeof(pk_ser));
+    /* Unset nonce_is_negated bit to allow parsing the public key */
+    pk_ser[0] &= ~(1 << 2);
+    return secp256k1_ec_pubkey_parse(ctx, &opening->original_pubnonce, &pk_ser[0], 33);
+}
+
+int secp256k1_s2c_opening_serialize(const secp256k1_context* ctx, unsigned char *output33, const secp256k1_s2c_opening* opening) {
+    size_t outputlen = 33;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(output33 != NULL);
+    ARG_CHECK(opening != NULL);
+    ARG_CHECK(secp256k1_s2c_commit_is_init(opening));
+
+    if (!secp256k1_ec_pubkey_serialize(ctx, &output33[0], &outputlen, &opening->original_pubnonce, SECP256K1_EC_COMPRESSED)) {
+        return 0;
+    }
+    /* Verify that ec_pubkey_serialize only sets the first two bits of the
+     * first byte, otherwise this function doesn't make any sense */
+    VERIFY_CHECK(output33[0] == 0x02 || output33[0] == 0x03);
+    if (opening->nonce_is_negated) {
+        /* Set nonce_is_negated bit */
+        output33[0] |= (1 << 2);
+    }
+    return 1;
+}
+
 #ifdef ENABLE_MODULE_ECDH
 # include "modules/ecdh/main_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+# include "modules/schnorrsig/main_impl.h"
 #endif
 
 #ifdef ENABLE_MODULE_RECOVERY
