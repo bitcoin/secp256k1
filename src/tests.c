@@ -19,6 +19,10 @@
 #include "include/secp256k1_preallocated.h"
 #include "testrand_impl.h"
 
+#ifdef ENABLE_RUST_NAIVETESTS
+#include "ecc_secp256k1.h"
+#endif
+
 #ifdef ENABLE_OPENSSL_TESTS
 #include "openssl/bn.h"
 #include "openssl/ec.h"
@@ -4134,6 +4138,50 @@ void test_ecdsa_sign_verify(void) {
     CHECK(!secp256k1_ecdsa_sig_verify(&ctx->ecmult_ctx, &sigr, &sigs, &pub, &msg));
 }
 
+#ifdef ENABLE_RUST_NAIVETESTS
+void test_ecdsa_sign_verify_rust(void) {
+
+    secp256k1_scalar msg, key;
+    unsigned char raw_key[32];
+    unsigned char raw_msg[32];
+    unsigned char raw_pubkey[65];
+    unsigned char raw_sig[64];
+    size_t pubkey_len = sizeof(raw_pubkey);
+    secp256k1_pubkey pubkey;
+    secp256k1_ecdsa_signature sig;
+
+    random_scalar_order_test(&msg);
+    random_scalar_order_test(&key);
+
+    secp256k1_scalar_get_b32(raw_msg, &msg);
+    secp256k1_scalar_get_b32(raw_key, &key);
+
+    CHECK(secp256k1_ec_pubkey_create(ctx, &pubkey, raw_key) == 1);
+    secp256k1_ec_pubkey_serialize(ctx, raw_pubkey, &pubkey_len, &pubkey, SECP256K1_EC_UNCOMPRESSED);
+    /* Sign with secp256k1 */
+    CHECK(secp256k1_ecdsa_sign(ctx, &sig, raw_msg, raw_key, NULL, NULL) == 1);
+    CHECK(secp256k1_ecdsa_verify(ctx, &sig, raw_msg, &pubkey) == 1);
+    secp256k1_ecdsa_signature_serialize_compact(ctx, raw_sig, &sig);
+    /* Verify with ecc-secp256k1(rust) */
+    CHECK(ecc_secp256k1_ecdsa_verify(raw_sig, raw_msg, raw_pubkey, 0) == 1);
+    /* Sign with ecc-secp256k1(rust) */
+    CHECK(ecc_secp256k1_ecdsa_sign(raw_sig, raw_msg, raw_key) == 1);
+    /* Verify with secp256k1 */
+    CHECK(secp256k1_ecdsa_signature_parse_compact(ctx, &sig, raw_sig) == 1);
+    CHECK(secp256k1_ecdsa_verify(ctx, &sig, raw_msg, &pubkey) == 1);
+}
+
+
+void run_ecdsa_sign_verify_rust(void) {
+    int i;
+    for (i = 0; i < 10*count; i++) {
+        test_ecdsa_sign_verify_rust();
+    }
+}
+
+#endif
+
+
 void run_ecdsa_sign_verify(void) {
     int i;
     for (i = 0; i < 10*count; i++) {
@@ -5288,6 +5336,10 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_MODULE_RECOVERY
     /* ECDSA pubkey recovery tests */
     run_recovery_tests();
+#endif
+
+#ifdef ENABLE_RUST_NAIVETESTS
+    run_ecdsa_sign_verify_rust();
 #endif
 
     secp256k1_rand256(run32);

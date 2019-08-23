@@ -104,6 +104,11 @@ AC_ARG_ENABLE(openssl_tests,
     [enable_openssl_tests=$enableval],
     [enable_openssl_tests=auto])
 
+AC_ARG_ENABLE(rust_naivetests,
+    AS_HELP_STRING([--enable-rust-naivetests],[enable tests against naive rust implementation [default=auto]]),
+    [enable_rust_naivetests=$enableval],
+    [enable_rust_naivetests=auto])
+
 AC_ARG_ENABLE(experimental,
     AS_HELP_STRING([--enable-experimental],[allow experimental configure options [default=no]]),
     [use_experimental=$enableval],
@@ -442,9 +447,16 @@ if test x"$use_tests" = x"yes"; then
       AC_MSG_ERROR([OpenSSL tests requested but OpenSSL with EC support is not available])
     fi
   fi
+  if test x"$enable_rust_naivetests" != x"no"; then
+    AC_DEFINE(ENABLE_RUST_NAIVETESTS, 1, [Define this symbol if you want to build the rust tests])
+    SECP_TEST_ONLY_LIBS="$SECP_TEST_ONLY_LIBS -lecc_secp256k1 -ldl -lpthread -lm -L./ecc-secp256k1/target/release"
+  fi
 else
   if test x"$enable_openssl_tests" = x"yes"; then
     AC_MSG_ERROR([OpenSSL tests requested but tests are not enabled])
+  fi
+    if test x"$enable_rust_naivetests" = x"yes"; then
+    AC_MSG_ERROR([Rust naiveTests requested but tests are not enabled])
   fi
 fi
 
@@ -523,6 +535,7 @@ AC_SUBST(JNI_INCLUDES)
 AC_SUBST(SECP_INCLUDES)
 AC_SUBST(SECP_LIBS)
 AC_SUBST(SECP_TEST_LIBS)
+AC_SUBST(SECP_TEST_ONLY_LIBS)
 AC_SUBST(SECP_TEST_INCLUDES)
 AM_CONDITIONAL([ENABLE_COVERAGE], [test x"$enable_coverage" = x"yes"])
 AM_CONDITIONAL([USE_TESTS], [test x"$use_tests" != x"no"])
@@ -534,6 +547,7 @@ AM_CONDITIONAL([ENABLE_MODULE_RECOVERY], [test x"$enable_module_recovery" = x"ye
 AM_CONDITIONAL([USE_JNI], [test x"$use_jni" = x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm"])
+AM_CONDITIONAL([ENABLE_RUST_NAIVETESTS], [test x"$enable_rust_naivetests" != x"no"])
 
 dnl make sure nothing new is exported so that we don't break the cache
 PKGCONFIG_PATH_TEMP="$PKG_CONFIG_PATH"
