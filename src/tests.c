@@ -1077,11 +1077,121 @@ void scalar_test(void) {
 
 }
 
+void scalar_chacha_tests(void) {
+    /* Test vectors 1 to 4 from https://tools.ietf.org/html/rfc8439#appendix-A
+     * Note that scalar_set_b32 and scalar_get_b32 represent integers
+     * underlying the scalar in big-endian format. */
+    unsigned char expected1[64] = {
+        0xad, 0xe0, 0xb8, 0x76, 0x90, 0x3d, 0xf1, 0xa0,
+        0xe5, 0x6a, 0x5d, 0x40, 0x28, 0xbd, 0x86, 0x53,
+        0xb8, 0x19, 0xd2, 0xbd, 0x1a, 0xed, 0x8d, 0xa0,
+        0xcc, 0xef, 0x36, 0xa8, 0xc7, 0x0d, 0x77, 0x8b,
+        0x7c, 0x59, 0x41, 0xda, 0x8d, 0x48, 0x57, 0x51,
+        0x3f, 0xe0, 0x24, 0x77, 0x37, 0x4a, 0xd8, 0xb8,
+        0xf4, 0xb8, 0x43, 0x6a, 0x1c, 0xa1, 0x18, 0x15,
+        0x69, 0xb6, 0x87, 0xc3, 0x86, 0x65, 0xee, 0xb2
+    };
+    unsigned char expected2[64] = {
+        0xbe, 0xe7, 0x07, 0x9f, 0x7a, 0x38, 0x51, 0x55,
+        0x7c, 0x97, 0xba, 0x98, 0x0d, 0x08, 0x2d, 0x73,
+        0xa0, 0x29, 0x0f, 0xcb, 0x69, 0x65, 0xe3, 0x48,
+        0x3e, 0x53, 0xc6, 0x12, 0xed, 0x7a, 0xee, 0x32,
+        0x76, 0x21, 0xb7, 0x29, 0x43, 0x4e, 0xe6, 0x9c,
+        0xb0, 0x33, 0x71, 0xd5, 0xd5, 0x39, 0xd8, 0x74,
+        0x28, 0x1f, 0xed, 0x31, 0x45, 0xfb, 0x0a, 0x51,
+        0x1f, 0x0a, 0xe1, 0xac, 0x6f, 0x4d, 0x79, 0x4b
+    };
+    unsigned char seed3[32] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+    };
+    unsigned char expected3[64] = {
+        0x24, 0x52, 0xeb, 0x3a, 0x92, 0x49, 0xf8, 0xec,
+        0x8d, 0x82, 0x9d, 0x9b, 0xdd, 0xd4, 0xce, 0xb1,
+        0xe8, 0x25, 0x20, 0x83, 0x60, 0x81, 0x8b, 0x01,
+        0xf3, 0x84, 0x22, 0xb8, 0x5a, 0xaa, 0x49, 0xc9,
+        0xbb, 0x00, 0xca, 0x8e, 0xda, 0x3b, 0xa7, 0xb4,
+        0xc4, 0xb5, 0x92, 0xd1, 0xfd, 0xf2, 0x73, 0x2f,
+        0x44, 0x36, 0x27, 0x4e, 0x25, 0x61, 0xb3, 0xc8,
+        0xeb, 0xdd, 0x4a, 0xa6, 0xa0, 0x13, 0x6c, 0x00
+    };
+    unsigned char seed4[32] = {
+        0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    unsigned char expected4[64] = {
+        0xfb, 0x4d, 0xd5, 0x72, 0x4b, 0xc4, 0x2e, 0xf1,
+        0xdf, 0x92, 0x26, 0x36, 0x32, 0x7f, 0x13, 0x94,
+        0xa7, 0x8d, 0xea, 0x8f, 0x5e, 0x26, 0x90, 0x39,
+        0xa1, 0xbe, 0xbb, 0xc1, 0xca, 0xf0, 0x9a, 0xae,
+        0xa2, 0x5a, 0xb2, 0x13, 0x48, 0xa6, 0xb4, 0x6c,
+        0x1b, 0x9d, 0x9b, 0xcb, 0x09, 0x2c, 0x5b, 0xe6,
+        0x54, 0x6c, 0xa6, 0x24, 0x1b, 0xec, 0x45, 0xd5,
+        0x87, 0xf4, 0x74, 0x73, 0x96, 0xf0, 0x99, 0x2e
+    };
+    unsigned char seed5[32] = {
+        0x32, 0x56, 0x56, 0xf4, 0x29, 0x02, 0xc2, 0xf8,
+        0xa3, 0x4b, 0x96, 0xf5, 0xa7, 0xf7, 0xe3, 0x6c,
+        0x92, 0xad, 0xa5, 0x18, 0x1c, 0xe3, 0x41, 0xae,
+        0xc3, 0xf3, 0x18, 0xd0, 0xfa, 0x5b, 0x72, 0x53
+    };
+    unsigned char expected5[64] = {
+        0xe7, 0x56, 0xd3, 0x28, 0xe9, 0xc6, 0x19, 0x5c,
+        0x6f, 0x17, 0x8e, 0x21, 0x8c, 0x1e, 0x72, 0x11,
+        0xe7, 0xbd, 0x17, 0x0d, 0xac, 0x14, 0xad, 0xe9,
+        0x3d, 0x9f, 0xb6, 0x92, 0xd6, 0x09, 0x20, 0xfb,
+        0x43, 0x8e, 0x3b, 0x6d, 0xe3, 0x33, 0xdc, 0xc7,
+        0x6c, 0x07, 0x6f, 0xbb, 0x1f, 0xb4, 0xc8, 0xb5,
+        0xe3, 0x6c, 0xe5, 0x12, 0xd9, 0xd7, 0x64, 0x0c,
+        0xf5, 0xa7, 0x0d, 0xab, 0x79, 0x03, 0xf1, 0x81
+    };
+
+    secp256k1_scalar exp_r1, exp_r2;
+    secp256k1_scalar r1, r2;
+    unsigned char seed0[32] = { 0 };
+
+    secp256k1_scalar_chacha20(&r1, &r2, seed0, 0);
+    secp256k1_scalar_set_b32(&exp_r1, &expected1[0], NULL);
+    secp256k1_scalar_set_b32(&exp_r2, &expected1[32], NULL);
+    CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
+    CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+
+    secp256k1_scalar_chacha20(&r1, &r2, seed0, 1);
+    secp256k1_scalar_set_b32(&exp_r1, &expected2[0], NULL);
+    secp256k1_scalar_set_b32(&exp_r2, &expected2[32], NULL);
+    CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
+    CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+
+    secp256k1_scalar_chacha20(&r1, &r2, seed3, 1);
+    secp256k1_scalar_set_b32(&exp_r1, &expected3[0], NULL);
+    secp256k1_scalar_set_b32(&exp_r2, &expected3[32], NULL);
+    CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
+    CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+
+    secp256k1_scalar_chacha20(&r1, &r2, seed4, 2);
+    secp256k1_scalar_set_b32(&exp_r1, &expected4[0], NULL);
+    secp256k1_scalar_set_b32(&exp_r2, &expected4[32], NULL);
+    CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
+    CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+
+    secp256k1_scalar_chacha20(&r1, &r2, seed5, 0x6ff8602a7a78e2f2ULL);
+    secp256k1_scalar_set_b32(&exp_r1, &expected5[0], NULL);
+    secp256k1_scalar_set_b32(&exp_r2, &expected5[32], NULL);
+    CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
+    CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+}
+
 void run_scalar_tests(void) {
     int i;
     for (i = 0; i < 128 * count; i++) {
         scalar_test();
     }
+
+    scalar_chacha_tests();
 
     {
         /* (-1)+1 should be zero. */
@@ -2363,6 +2473,85 @@ void run_ec_combine(void) {
     for (i = 0; i < count * 8; i++) {
          test_ec_combine();
     }
+}
+
+int test_ec_commit_seckey(unsigned char *seckey, secp256k1_pubkey *commitment) {
+    /* Return if seckey is the discrete log of commitment */
+    secp256k1_pubkey pubkey_tmp;
+    return secp256k1_ec_pubkey_create(ctx, &pubkey_tmp, seckey) == 1
+           && memcmp(&pubkey_tmp, commitment, sizeof(pubkey_tmp)) == 0;
+}
+
+void test_ec_commit(void) {
+    unsigned char seckey[32];
+    secp256k1_pubkey pubkey;
+    secp256k1_pubkey commitment;
+    unsigned char data[32];
+
+    /* Create random keypair and data */
+    secp256k1_rand256(seckey);
+    CHECK(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey));
+    secp256k1_rand256_test(data);
+
+    /* Commit to data and verify */
+    CHECK(secp256k1_ec_commit(ctx, &commitment, &pubkey, data, 32));
+    CHECK(secp256k1_ec_commit_verify(ctx, &commitment, &pubkey, data, 32));
+    CHECK(secp256k1_ec_commit_seckey(ctx, seckey, &pubkey, data, 32));
+    CHECK(test_ec_commit_seckey(seckey, &commitment) == 1);
+
+    /* Check that verification fails with different data */
+    CHECK(secp256k1_ec_commit_verify(ctx, &commitment, &pubkey, data, 31) == 0);
+}
+
+void test_ec_commit_api(void) {
+    unsigned char seckey[32];
+    secp256k1_pubkey pubkey;
+    secp256k1_pubkey commitment;
+    unsigned char data[32];
+
+    memset(data, 23, sizeof(data));
+
+    /* Create random keypair */
+    secp256k1_rand256(seckey);
+    CHECK(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey));
+
+    CHECK(secp256k1_ec_commit(ctx, &commitment, &pubkey, data, 1) == 1);
+    /* The same pubkey can be both input and output of the function */
+    {
+        secp256k1_pubkey pubkey_tmp = pubkey;
+        CHECK(secp256k1_ec_commit(ctx, &pubkey_tmp, &pubkey_tmp, data, 1) == 1);
+        CHECK(memcmp(commitment.data, pubkey_tmp.data, sizeof(commitment.data)) == 0);
+    }
+
+    /* If the pubkey is not provided it will be computed from seckey */
+    CHECK(secp256k1_ec_commit_seckey(ctx, seckey, NULL, data, 1) == 1);
+    CHECK(test_ec_commit_seckey(seckey, &commitment) == 1);
+    /* pubkey is not provided but seckey overflows */
+    {
+        unsigned char overflowed_seckey[32];
+        memset(overflowed_seckey, 0xFF, sizeof(overflowed_seckey));
+        CHECK(secp256k1_ec_commit_seckey(ctx, overflowed_seckey, NULL, data, 1) == 0);
+    }
+
+    CHECK(secp256k1_ec_commit_verify(ctx, &commitment, &pubkey, data, 1) == 1);
+
+    /* Commitment to 0-len data should fail */
+    CHECK(secp256k1_ec_commit(ctx, &commitment, &pubkey, data, 0) == 0);
+    CHECK(secp256k1_ec_commit_verify(ctx, &commitment, &pubkey, data, 0) == 0);
+    CHECK(memcmp(&pubkey.data, &commitment.data, sizeof(pubkey.data)) == 0);
+    {
+        unsigned char seckey_tmp[32];
+        memcpy(seckey_tmp, seckey, 32);
+        CHECK(secp256k1_ec_commit_seckey(ctx, seckey_tmp, &pubkey, data, 0) == 0);
+    }
+}
+
+void run_ec_commit(void) {
+    int i;
+    for (i = 0; i < count * 8; i++) {
+         test_ec_commit();
+    }
+    test_ec_commit_api();
 }
 
 void test_group_decompress(const secp256k1_fe* x) {
@@ -4104,6 +4293,59 @@ void run_eckey_edge_case_test(void) {
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
 }
 
+
+void run_s2c_opening_test(void) {
+    int i = 0;
+    unsigned char output[34];
+    unsigned char input[34] = {
+            0x01,
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x02
+    };
+    secp256k1_s2c_opening opening;
+    size_t ecount = 0;
+
+    secp256k1_context_set_illegal_callback(ctx, counting_illegal_callback_fn, &ecount);
+
+    /* Uninitialized opening can't be serialized. Actually testing that would be
+     * undefined behavior. Therefore we simulate it by setting the opening to 0. */
+    memset(&opening, 0, sizeof(opening));
+    CHECK(ecount == 0);
+    CHECK(secp256k1_s2c_opening_serialize(ctx, output, &opening) == 0);
+    CHECK(ecount == 1);
+
+    /* First parsing, then serializing works */
+    CHECK(secp256k1_s2c_opening_parse(ctx, &opening, input) == 1);
+    CHECK(secp256k1_s2c_opening_serialize(ctx, output, &opening) == 1);
+
+    {
+        /* Invalid pubkey makes parsing fail */
+        unsigned char input_tmp[34];
+        memcpy(input_tmp, input, sizeof(input_tmp));
+        input_tmp[33] = 0;
+        CHECK(secp256k1_s2c_opening_parse(ctx, &opening, input_tmp) == 0);
+    }
+
+    /* Try parsing and serializing a bunch of openings */
+    do {
+        /* This is expected to fail in about 50% of iterations because the
+         * points' x-coordinates are uniformly random */
+        if (secp256k1_s2c_opening_parse(ctx, &opening, input) == 1) {
+            CHECK(secp256k1_s2c_opening_serialize(ctx, output, &opening) == 1);
+            CHECK(memcmp(output, input, 34) == 0);
+        }
+        secp256k1_rand256(input);
+        /* nonce_is_negated */
+        input[0] = input[0] & 1;
+        /* oddness */
+        input[1] = (input[1] % 2) + 2;
+        i++;
+    } while(i < count);
+}
+
 void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid) {
     secp256k1_scalar nonce;
     do {
@@ -5162,6 +5404,10 @@ void run_ecdsa_openssl(void) {
 # include "modules/ecdh/tests_impl.h"
 #endif
 
+#ifdef ENABLE_MODULE_SCHNORRSIG
+# include "modules/schnorrsig/tests_impl.h"
+#endif
+
 #ifdef ENABLE_MODULE_RECOVERY
 # include "modules/recovery/tests_impl.h"
 #endif
@@ -5258,6 +5504,7 @@ int main(int argc, char **argv) {
     run_ecmult_const_tests();
     run_ecmult_multi_tests();
     run_ec_combine();
+    run_ec_commit();
 
     /* endomorphism tests */
 #ifdef USE_ENDOMORPHISM
@@ -5270,9 +5517,16 @@ int main(int argc, char **argv) {
     /* EC key edge cases */
     run_eckey_edge_case_test();
 
+    run_s2c_opening_test();
+
 #ifdef ENABLE_MODULE_ECDH
     /* ecdh tests */
     run_ecdh_tests();
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+    /* Schnorrsig tests */
+    run_schnorrsig_tests();
 #endif
 
     /* ecdsa tests */

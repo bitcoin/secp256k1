@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 
 /* These rules specify the order of arguments in API calls:
  *
@@ -80,6 +81,29 @@ typedef struct {
 typedef struct {
     unsigned char data[64];
 } secp256k1_ecdsa_signature;
+
+/** Data structure that holds a sign-to-contract ("s2c") opening information.
+ *  Sign-to-contract allows a signer to commit to some data as part of a signature. It
+ *  can be used as an Out-argument in certain signing functions.
+ *
+ *  This structure is not opaque, but it is strongly discouraged to read or write to
+ *  it directly.
+ *
+ *  The exact representation of data inside is implementation defined and not
+ *  guaranteed to be portable between different platforms or versions. It can
+ *  be safely copied/moved.
+ */
+typedef struct {
+    /* magic is set during initialization */
+    uint64_t magic;
+    /* Public nonce before applying the sign-to-contract commitment */
+    secp256k1_pubkey original_pubnonce;
+    /* Byte indicating if signing algorithm negated the nonce. Alternatively when
+     * verifying we could compute the EC commitment of original_pubnonce and the
+     * data and negate if this would not be a valid nonce. But this would prevent
+     * batch verification of sign-to-contract commitments. */
+    int nonce_is_negated;
+} secp256k1_s2c_opening;
 
 /** A pointer to a function to deterministically generate a nonce.
  *
@@ -444,6 +468,37 @@ SECP256K1_API int secp256k1_ecdsa_signature_serialize_compact(
     const secp256k1_ecdsa_signature* sig
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
+/** Parse a sign-to-contract opening.
+ *
+ *  Returns: 1 if the opening was fully valid.
+ *           0 if the opening could not be parsed or is invalid.
+ *  Args:    ctx: a secp256k1 context object.
+ *  Out: opening: pointer to an opening object. If 1 is returned, it is set to a
+ *                 parsed version of input. If not, its value is undefined.
+ *  In:  input34: pointer to 34-byte array with a serialized opening
+ *
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_s2c_opening_parse(
+    const secp256k1_context* ctx,
+    secp256k1_s2c_opening* opening,
+    const unsigned char *input34
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
+
+/** Serialize a sign-to-contract opening into a byte sequence.
+ *
+ *  Returns: 1 if the opening was successfully serialized.
+ *           0 if the opening was not initializaed.
+ *  Args:     ctx: a secp256k1 context object.
+ *  Out: output34: pointer to a 34-byte array to place the serialized opening
+ *                 in.
+ *  In:   opening: a pointer to an initialized `secp256k1_s2c_opening`.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_s2c_opening_serialize(
+    const secp256k1_context* ctx,
+    unsigned char *output34,
+    const secp256k1_s2c_opening* opening
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
+
 /** Verify an ECDSA signature.
  *
  *  Returns: 1: correct signature
@@ -522,6 +577,12 @@ SECP256K1_API int secp256k1_ecdsa_signature_normalize(
  * extra entropy.
  */
 SECP256K1_API extern const secp256k1_nonce_function secp256k1_nonce_function_rfc6979;
+
+/** An implementation of the nonce generation function as defined in BIP-schnorr.
+ * If a data pointer is passed, it is assumed to be a pointer to 32 bytes of
+ * extra entropy.
+ */
+SECP256K1_API extern const secp256k1_nonce_function secp256k1_nonce_function_bipschnorr;
 
 /** A default safe nonce generation function (currently equal to secp256k1_nonce_function_rfc6979). */
 SECP256K1_API extern const secp256k1_nonce_function secp256k1_nonce_function_default;
