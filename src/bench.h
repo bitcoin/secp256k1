@@ -12,6 +12,25 @@
 #include <math.h>
 #include "sys/time.h"
 
+
+# if defined(__GNUC__)
+#   define ALWAYS_INLINE SECP256K1_INLINE __attribute__((__always_inline__))
+# elif defined(_MSC_VER) && !defined(__clang__)
+#   define ALWAYS_INLINE SECP256K1_INLINE __forceinline
+# elif defined(__CLANG__) && __has_attribute(__always_inline__)
+#   define ALWAYS_INLINE SECP256K1_INLINE __attribute__((__always_inline__))
+# else
+#   define ALWAYS_INLINE SECP256K1_INLINE
+# endif
+
+/* A memory fence to prevent compiler optimizations
+   It tells the optimizer that it can do whatever it wants with *p so the optimizer can't optimize *p out.
+   The nice thing is that because the assembly is actually empty it doesn't add any instrcutions
+   *Notice: This is a best effort, nothing promise us it will always work.* */
+ALWAYS_INLINE static void memory_fence(void *p) {
+    __asm__ __volatile__("": : "g"(p) : "memory");
+}
+
 static double gettimedouble(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
