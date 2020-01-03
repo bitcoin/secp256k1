@@ -103,6 +103,34 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ecdsa_recover(
     const unsigned char *msg32
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
+/** Recover a set of ECDSA public keys from a set of regular signatures and messages.
+ * Producing 0-4 public keys per signature.
+ *
+ *  Returns: 1: Was able to recover something, and no signature or public key were invalid.
+ *           0: otherwise.
+ *           In particular, returns 1 if n is 0.
+ *  Args:    ctx:          Pointer to a context object, initialized for verification (cannot be NULL)
+ *           scratch:      Scratch space used for point conversions.
+ *  Out:     pubkeys_out:  Array of pubkeys pointers of size n*4, for each signature a corresponding 0-4 pubkey pointers will be written for it, the rest NULL. (4 keys assigned for each signature)
+ *                         i.e. if pubkeys_n[i]=x then from pubkeys[i*4] to pubkeys[i*4+x] any pointer that isn't NULL is a valid public key for signature i.
+ *  In:      sigs:         Array size n, of pointers to the signatures being recovered.
+ *           msgs32:       Array size n, of pointers to the 32-byte message hashs assumed to be signed
+ *           n:            The amount of public keys to recover.
+ *           pubkeys_in:   Array of size pubkeys_n, with a list of potential public keys to check against.
+ *           pubkeys_n:    The amount of public keys being passed to convert against.
+ *                         All arrays *must* be at the documented size, unless n is zero then they can be NULL.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ecdsa_recover_batch(
+    const secp256k1_context* ctx,
+    secp256k1_scratch_space *scratch,
+    const secp256k1_pubkey *pubkeys_out[],
+    const secp256k1_ecdsa_signature *const sigs[],
+    const unsigned char *const msgs32[],
+    size_t n,
+    const secp256k1_pubkey *const pubkeys[],
+    size_t pubkeys_n
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
+
 #ifdef __cplusplus
 }
 #endif

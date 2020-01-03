@@ -443,6 +443,29 @@ SECP256K1_INLINE static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_f
 #endif
 }
 
+
+SECP256K1_INLINE static void secp256k1_fe_copy_add(secp256k1_fe *r, const secp256k1_fe *b, const secp256k1_fe *a) {
+#ifdef VERIFY
+  secp256k1_fe_verify(a);
+#endif
+  r->n[0] = a->n[0] + b->n[0];
+  r->n[1] = a->n[1] + b->n[1];
+  r->n[2] = a->n[2] + b->n[2];
+  r->n[3] = a->n[3] + b->n[3];
+  r->n[4] = a->n[4] + b->n[4];
+  r->n[5] = a->n[5] + b->n[5];
+  r->n[6] = a->n[6] + b->n[6];
+  r->n[7] = a->n[7] + b->n[7];
+  r->n[8] = a->n[8] + b->n[8];
+  r->n[9] = a->n[9] + b->n[9];
+
+#ifdef VERIFY
+  r->magnitude = b->magnitude + a->magnitude;
+    r->normalized = 0;
+    secp256k1_fe_verify(r);
+#endif
+}
+
 #if defined(USE_EXTERNAL_ASM)
 
 /* External assembler implementation */

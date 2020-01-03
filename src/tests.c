@@ -5166,6 +5166,26 @@ void run_ecdsa_openssl(void) {
 # include "modules/recovery/tests_impl.h"
 #endif
 
+void run_ec_add_neg(void) {
+  int ncount;
+  secp256k1_ge age, bge;
+  secp256k1_gej a, b;
+  secp256k1_gej bn, ab1, ab2, anb1, anb2;
+
+  for (ncount = 0; ncount < count; ncount++) {
+    random_group_element_test(&age); random_group_element_test(&bge);
+    secp256k1_gej_set_ge(&a, &age); secp256k1_gej_set_ge(&b, &bge);
+
+    secp256k1_gej_neg(&bn, &b);
+    secp256k1_gej_add_var(&ab1, &a, &b, NULL);
+    secp256k1_gej_add_var(&anb1, &a, &bn, NULL);
+    secp256k1_gej_add_neg_var(&ab2, &anb2, &a, &b, NULL);
+
+    secp256k1_ge_set_gej(&age, &ab1); ge_equals_gej(&age, &ab2);
+    secp256k1_ge_set_gej(&bge, &anb1); ge_equals_gej(&bge, &anb2);
+  }
+}
+
 int main(int argc, char **argv) {
     unsigned char seed16[16] = {0};
     unsigned char run32[32] = {0};
@@ -5267,6 +5287,7 @@ int main(int argc, char **argv) {
     run_ecmult_const_tests();
     run_ecmult_multi_tests();
     run_ec_combine();
+    run_ec_add_neg();
 
     /* endomorphism tests */
 #ifdef USE_ENDOMORPHISM

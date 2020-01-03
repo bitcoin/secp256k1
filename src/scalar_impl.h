@@ -222,6 +222,33 @@ SECP256K1_INLINE static int secp256k1_scalar_is_even(const secp256k1_scalar *a) 
 }
 #endif
 
+static void secp256k1_scalar_inv_all_var(secp256k1_scalar *r, const secp256k1_scalar *a, size_t len) {
+  secp256k1_scalar u;
+  size_t i;
+  if (len < 1) {
+    return;
+  }
+
+  VERIFY_CHECK((r + len <= a) || (a + len <= r));
+
+  r[0] = a[0];
+
+  i = 0;
+  while (++i < len) {
+    secp256k1_scalar_mul(&r[i], &r[i - 1], &a[i]);
+  }
+
+  secp256k1_scalar_inverse_var(&u, &r[--i]);
+
+  while (i > 0) {
+    size_t j = i--;
+    secp256k1_scalar_mul(&r[j], &r[i], &u);
+    secp256k1_scalar_mul(&u, &u, &a[j]);
+  }
+
+  r[0] = u;
+}
+
 static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_scalar *x) {
 #if defined(USE_SCALAR_INV_BUILTIN)
     secp256k1_scalar_inverse(r, x);

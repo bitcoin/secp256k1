@@ -63,6 +63,9 @@ static void secp256k1_scalar_inverse(secp256k1_scalar *r, const secp256k1_scalar
 /** Compute the inverse of a scalar (modulo the group order), without constant-time guarantee. */
 static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_scalar *a);
 
+/** Calculate the (modular) inverses of a batch of scalars. The inputs and outputs must not overlap in memory. */
+static void secp256k1_scalar_inv_all_var(secp256k1_scalar *r, const secp256k1_scalar *a, size_t len);
+
 /** Compute the complement of a scalar (modulo the group order). */
 static void secp256k1_scalar_negate(secp256k1_scalar *r, const secp256k1_scalar *a);
 

@@ -147,6 +147,50 @@ void test_ecdsa_recovery_api(void) {
     secp256k1_context_destroy(both);
 }
 
+#define N_AMOUNT 10
+void test_ecdsa_recovery_batch(void) {
+  int i;
+  secp256k1_pubkey pubkeys[N_AMOUNT];
+  const secp256k1_pubkey* pubkeys_ptrs[N_AMOUNT];
+  const secp256k1_pubkey* pubkeys_out[N_AMOUNT*4];
+  const secp256k1_ecdsa_signature* sigs_ptrs[N_AMOUNT];
+  secp256k1_ecdsa_signature sigs[N_AMOUNT];
+  unsigned char msgs[N_AMOUNT][32];
+  const unsigned char *msgs_arr[N_AMOUNT];
+  unsigned char privkey[32] = "My fun and valid superSecret key";
+  secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 4*N_AMOUNT * (104+152+16+16));
+  CHECK(scratch != NULL);
+
+  for (i = 0; i < N_AMOUNT; ++i) {
+    {
+      secp256k1_scalar rand_scalar;
+      random_scalar_order_test(&rand_scalar);
+      secp256k1_scalar_get_b32(msgs[i], &rand_scalar);
+    }
+    msgs_arr[i] = msgs[i];
+    CHECK(secp256k1_ecdsa_sign(ctx, &sigs[i], msgs[i], privkey, NULL, NULL));
+    CHECK(secp256k1_ec_pubkey_create(ctx, &pubkeys[i], privkey));
+    sigs_ptrs[i] = &sigs[i];
+    pubkeys_ptrs[i] = &pubkeys[i];
+  }
+  CHECK(secp256k1_ecdsa_recover_batch(ctx, scratch, pubkeys_out, sigs_ptrs, msgs_arr, N_AMOUNT, pubkeys_ptrs, N_AMOUNT));
+
+
+  for (i = 0; i < 4*N_AMOUNT; i +=4) {
+    CHECK(memcmp(pubkeys_out[0], pubkeys_out[i], sizeof(secp256k1_pubkey)) == 0);
+    CHECK(pubkeys_out[i+1] == NULL);
+    CHECK(pubkeys_out[i+2] == NULL);
+    CHECK(pubkeys_out[i+3] == NULL);
+  }
+
+  memset(&sigs[2].data, 0, 64);
+  CHECK(!secp256k1_ecdsa_recover_batch(ctx, scratch, pubkeys_out, sigs_ptrs, msgs_arr, N_AMOUNT, pubkeys_ptrs, N_AMOUNT));
+  CHECK(pubkeys_out[2] == NULL);
+
+  CHECK(secp256k1_ecdsa_recover_batch(ctx, scratch, NULL, NULL, NULL, 0, NULL, 0));
+
+}
+
 void test_ecdsa_recovery_end_to_end(void) {
     unsigned char extra[32] = {0x00};
     unsigned char privkey[32];
@@ -207,6 +251,7 @@ void test_ecdsa_recovery_end_to_end(void) {
 
 /* Tests several edge cases. */
 void test_ecdsa_recovery_edge_cases(void) {
+  secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 4*(104+152+16+16));
     const unsigned char msg32[32] = {
         'T', 'h', 'i', 's', ' ', 'i', 's', ' ',
         'a', ' ', 'v', 'e', 'r', 'y', ' ', 's',
@@ -240,7 +285,12 @@ void test_ecdsa_recovery_edge_cases(void) {
     secp256k1_pubkey pubkeyb;
     secp256k1_ecdsa_recoverable_signature rsig;
     secp256k1_ecdsa_signature sig;
-    int recid;
+    int recid, i, j, ctr = 0;
+    const secp256k1_ecdsa_signature* const_sig = &sig;
+    const unsigned char* const_msg32 = msg32;
+    const secp256k1_pubkey* pubkeys_out[4];
+    secp256k1_pubkey pubkeys[4];
+    const secp256k1_pubkey* pubkeys_ptrs[4];
 
     CHECK(secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &rsig, sig64, 0));
     CHECK(!secp256k1_ecdsa_recover(ctx, &pubkey, &rsig, msg32));
@@ -252,7 +302,21 @@ void test_ecdsa_recovery_edge_cases(void) {
     CHECK(!secp256k1_ecdsa_recover(ctx, &pubkey, &rsig, msg32));
 
     for (recid = 0; recid < 4; recid++) {
-        int i;
+        pubkeys_ptrs[recid] = &pubkeys[recid];
+        CHECK(secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &rsig, sigb64, recid));
+        CHECK(secp256k1_ecdsa_recover(ctx, &pubkeys[recid], &rsig, msg32));
+    }
+
+    CHECK(secp256k1_ecdsa_signature_parse_compact(ctx, &sig, sigb64));
+    CHECK(secp256k1_ecdsa_recover_batch(ctx, scratch, pubkeys_out, &const_sig, &const_msg32, 1, pubkeys_ptrs, 4));
+    for (i = 0; i < 4; ++i) {
+        for (j = 0; j < 4; ++j) {
+            ctr += pubkeys_out[i] == pubkeys_ptrs[j];
+        }
+    }
+    CHECK(ctr == 4);
+
+    for (recid = 0; recid < 4; recid++) {
         int recid2;
         /* (4,4) encoded in DER. */
         unsigned char sigbder[8] = {0x30, 0x06, 0x02, 0x01, 0x04, 0x02, 0x01, 0x04};
@@ -388,6 +452,7 @@ void run_recovery_tests(void) {
         test_ecdsa_recovery_end_to_end();
     }
     test_ecdsa_recovery_edge_cases();
+    test_ecdsa_recovery_batch();
 }
 
 #endif /* SECP256K1_MODULE_RECOVERY_TESTS_H */

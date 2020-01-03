@@ -99,11 +99,17 @@ static int secp256k1_gej_has_quad_y_var(const secp256k1_gej *a);
  * a may not be zero. Constant time. */
 static void secp256k1_gej_double_nonzero(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr);
 
+/** Compare if a affine element and a jacobian element are the same point without doing inverses. Requires the b->x and b->y to be weakly normalized */
+static int ge_equals_gej_var(const secp256k1_ge *a, const secp256k1_gej *b);
+
 /** Set r equal to the double of a. If rzr is not-NULL, r->z = a->z * *rzr (where infinity means an implicit z = 0). */
 static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr);
 
 /** Set r equal to the sum of a and b. If rzr is non-NULL, r->z = a->z * *rzr (a cannot be infinity in that case). */
 static void secp256k1_gej_add_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_gej *b, secp256k1_fe *rzr);
+
+/** Set r equal to the sum of a and b. And set n equal to a-b If rzr is non-NULL, r->z = a->z * *rzr (a cannot be infinity in that case). */
+static void secp256k1_gej_add_neg_var(secp256k1_gej *r, secp256k1_gej *n, const secp256k1_gej *a, const secp256k1_gej *b, secp256k1_fe *rzr);
 
 /** Set r equal to the sum of a and b (with b given in affine coordinates, and not infinity). */
 static void secp256k1_gej_add_ge(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b);

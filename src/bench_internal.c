@@ -215,6 +215,15 @@ void bench_group_add_var(void* arg) {
     }
 }
 
+void bench_group_add_neg_var(void* arg) {
+    int i;
+    bench_inv *data = (bench_inv*)arg;
+
+    for (i = 0; i < 200000; i++) {
+        secp256k1_gej_add_neg_var(&data->gej_x, &data->gej_y, &data->gej_x, &data->gej_y, NULL);
+    }
+}
+
 void bench_group_add_affine(void* arg) {
     int i;
     bench_inv *data = (bench_inv*)arg;
@@ -358,6 +367,7 @@ int main(int argc, char **argv) {
 
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "double")) run_benchmark("group_double_var", bench_group_double_var, bench_setup, NULL, &data, 10, 200000);
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "add")) run_benchmark("group_add_var", bench_group_add_var, bench_setup, NULL, &data, 10, 200000);
+    if (have_flag(argc, argv, "group") || have_flag(argc, argv, "add")) run_benchmark("group_add_neg_var", bench_group_add_neg_var, bench_setup, NULL, &data, 10, 200000);
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "add")) run_benchmark("group_add_affine", bench_group_add_affine, bench_setup, NULL, &data, 10, 200000);
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "add")) run_benchmark("group_add_affine_var", bench_group_add_affine_var, bench_setup, NULL, &data, 10, 200000);
     if (have_flag(argc, argv, "group") || have_flag(argc, argv, "jacobi")) run_benchmark("group_jacobi_var", bench_group_jacobi_var, bench_setup, NULL, &data, 10, 20000);
