@@ -152,6 +152,8 @@ static void secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out
     uint32_t sizedesc[2];
     uint32_t out[8];
     int i = 0;
+    /* The maximum message size of SHA256 is 2^64-1 bits. */
+    VERIFY_CHECK(hash->bytes < ((uint64_t)1 << 56));
     sizedesc[0] = BE32(hash->bytes >> 29);
     sizedesc[1] = BE32(hash->bytes << 3);
     secp256k1_sha256_write(hash, pad, 1 + ((119 - (hash->bytes % 64)) % 64));
