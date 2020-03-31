@@ -148,7 +148,7 @@ static void secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *
 }
 
 static void secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32) {
-    static const unsigned char pad[64] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    static const unsigned char pad[64] = {0x80};
     uint32_t sizedesc[2];
     uint32_t out[8];
     int i = 0;
