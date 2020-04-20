@@ -34,15 +34,11 @@
 #endif
 
 static void secp256k1_sha256_initialize(secp256k1_sha256 *hash) {
-    hash->s[0] = 0x6a09e667ul;
-    hash->s[1] = 0xbb67ae85ul;
-    hash->s[2] = 0x3c6ef372ul;
-    hash->s[3] = 0xa54ff53aul;
-    hash->s[4] = 0x510e527ful;
-    hash->s[5] = 0x9b05688cul;
-    hash->s[6] = 0x1f83d9abul;
-    hash->s[7] = 0x5be0cd19ul;
-    hash->bytes = 0;
+    *hash = secp256k1_sha256_initial_state;
+}
+
+static void secp256k1_sha256_initialize_midstate(secp256k1_sha256 *hash, const secp256k1_sha256 *state) {
+    *hash = *state;
 }
 
 /** Perform one SHA-256 transformation, processing 16 big endian 32-bit words. */
