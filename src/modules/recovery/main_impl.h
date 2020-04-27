@@ -121,8 +121,7 @@ static int secp256k1_ecdsa_sig_recover(const secp256k1_ecmult_context *ctx, cons
 }
 
 int secp256k1_ecdsa_sign_recoverable(const secp256k1_context* ctx, secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void* noncedata) {
-    secp256k1_scalar r, s;
-    secp256k1_scalar sec, non, msg;
+    secp256k1_scalar r, s, sec;
     int recid;
     int ret = 0;
     int overflow = 0;
@@ -138,6 +137,7 @@ int secp256k1_ecdsa_sign_recoverable(const secp256k1_context* ctx, secp256k1_ecd
     secp256k1_scalar_set_b32(&sec, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (!overflow && !secp256k1_scalar_is_zero(&sec)) {
+        secp256k1_scalar non, msg;
         unsigned char nonce32[32];
         unsigned int count = 0;
         secp256k1_scalar_set_b32(&msg, msg32, NULL);
@@ -154,11 +154,11 @@ int secp256k1_ecdsa_sign_recoverable(const secp256k1_context* ctx, secp256k1_ecd
             }
             count++;
         }
-        memset(nonce32, 0, 32);
+        memclear(nonce32, sizeof(nonce32));
         secp256k1_scalar_clear(&msg);
         secp256k1_scalar_clear(&non);
-        secp256k1_scalar_clear(&sec);
     }
+    secp256k1_scalar_clear(&sec);
     if (ret) {
         secp256k1_ecdsa_recoverable_signature_save(signature, &r, &s, recid);
     } else {

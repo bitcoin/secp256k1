@@ -23,8 +23,8 @@
     VERIFY_CHECK(((n) & 1) == 1); \
     VERIFY_CHECK((n) >= -((1 << ((w)-1)) - 1)); \
     VERIFY_CHECK((n) <=  ((1 << ((w)-1)) - 1)); \
-    VERIFY_SETUP(secp256k1_fe_clear(&(r)->x)); \
-    VERIFY_SETUP(secp256k1_fe_clear(&(r)->y)); \
+    VERIFY_SETUP(secp256k1_fe_set_int(&(r)->x, 0)); \
+    VERIFY_SETUP(secp256k1_fe_set_int(&(r)->y, 0)); \
     for (m = 0; m < ECMULT_TABLE_SIZE(w); m++) { \
         /* This loop is used to avoid secret data in array indices. See
          * the comment in ecmult_gen_impl.h for rationale. */ \

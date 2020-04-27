@@ -36,6 +36,10 @@ SECP256K1_INLINE static int secp256k1_fe_equal_var(const secp256k1_fe *a, const 
     return secp256k1_fe_normalizes_to_zero_var(&na);
 }
 
+SECP256K1_INLINE static void secp256k1_fe_clear(secp256k1_fe *a) {
+    memclear(a, sizeof(secp256k1_fe));
+}
+
 static int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a) {
     /** Given that p is congruent to 3 mod 4, we can compute the square root of
      *  a mod p as the (p+1)/4'th power of a.

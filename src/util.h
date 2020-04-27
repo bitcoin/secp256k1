@@ -11,10 +11,16 @@
 #include "libsecp256k1-config.h"
 #endif
 
+#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <limits.h>
+
+#if defined(_MSC_VER)
+// For SecureZeroMemory
+#include <Windows.h>
+#endif
 
 typedef struct {
     void (*fn)(const char *text, void* data);
@@ -173,6 +179,31 @@ static SECP256K1_INLINE void memczero(void *s, size_t len, int flag) {
         p++;
         len--;
     }
+}
+
+/* Cleanses memory to prevent leaking sensitive info. Won't be optimized out. */
+static SECP256K1_INLINE void memclear(void *ptr, size_t len) {
+#if defined(_MSC_VER)
+    /* SecureZeroMemory is guaranteed not to be optimized out by MSVC. */
+    SecureZeroMemory(ptr, n);
+#elif defined(__GNUC__)
+    /* We use a memory barrier that scares the compiler away from optimizing out the memset.
+     *
+     * Quoting Adam Langley <agl@google.com> in commit ad1907fe73334d6c696c8539646c21b11178f20f
+     * in BoringSSL (ISC License):
+     *    As best as we can tell, this is sufficient to break any optimisations that
+     *    might try to eliminate "superfluous" memsets.
+     * This method used in memzero_explicit() the Linux kernel, too. Its advantage is that it is
+     * pretty efficient, because the compiler can still implement the memset() efficently,
+     * just not remove it entirely. See "Dead Store Elimination (Still) Considered Harmful" by
+     * Yang et al. (USENIX Security 2017) for more background.
+     */
+    memset(ptr, 0, len);
+    __asm__ __volatile__("" : : "r"(ptr) : "memory");
+#else
+    void *(*volatile const volatile_memset)(void *, int, size_t) = memset;
+    volatile_memset(ptr, 0, len);
+#endif
 }
 
 #endif /* SECP256K1_UTIL_H */

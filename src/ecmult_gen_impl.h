@@ -151,7 +151,7 @@ static void secp256k1_ecmult_gen(const secp256k1_ecmult_gen_context *ctx, secp25
         secp256k1_ge_from_storage(&add, &adds);
         secp256k1_gej_add_ge(r, r, &add);
     }
-    bits = 0;
+    memclear(&bits, sizeof(bits));
     secp256k1_ge_clear(&add);
     secp256k1_scalar_clear(&gnb);
 }
@@ -182,7 +182,7 @@ static void secp256k1_ecmult_gen_blind(secp256k1_ecmult_gen_context *ctx, const 
         memcpy(keydata + 32, seed32, 32);
     }
     secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, seed32 ? 64 : 32);
-    memset(keydata, 0, sizeof(keydata));
+    memclear(keydata, sizeof(keydata));
     /* Accept unobservably small non-uniformity. */
     secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
     overflow = !secp256k1_fe_set_b32(&s, nonce32);
@@ -196,13 +196,15 @@ static void secp256k1_ecmult_gen_blind(secp256k1_ecmult_gen_context *ctx, const 
     /* A blinding value of 0 works, but would undermine the projection hardening. */
     secp256k1_scalar_cmov(&b, &secp256k1_scalar_one, secp256k1_scalar_is_zero(&b));
     secp256k1_rfc6979_hmac_sha256_finalize(&rng);
-    memset(nonce32, 0, 32);
     secp256k1_ecmult_gen(ctx, &gb, &b);
     secp256k1_scalar_negate(&b, &b);
     ctx->blind = b;
     ctx->initial = gb;
+
+    memclear(nonce32, sizeof(nonce32));
     secp256k1_scalar_clear(&b);
     secp256k1_gej_clear(&gb);
+    secp256k1_rfc6979_hmac_sha256_clear(&rng);
 }
 
 #endif /* SECP256K1_ECMULT_GEN_IMPL_H */

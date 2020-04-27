@@ -14,8 +14,8 @@
  *  - Each field element can be normalized or not.
  *  - Each field element has a magnitude, which represents how far away
  *    its representation is away from normalization. Normalized elements
- *    always have a magnitude of 1, but a magnitude of 1 doesn't imply
- *    normality.
+ *    always have a magnitude of 0 or 1, but a magnitude of 1 doesn't
+ *    imply normality.
  */
 
 #if defined HAVE_CONFIG_H
@@ -51,10 +51,11 @@ static int secp256k1_fe_normalizes_to_zero(secp256k1_fe *r);
  *  implementation may optionally normalize the input, but this should not be relied upon. */
 static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r);
 
-/** Set a field element equal to a small integer. Resulting field element is normalized. */
+/** Set a field element equal to a small integer. Resulting field element is normalized; it has
+ *  magnitude 0 if a == 0, and magnitude 1 otherwise. */
 static void secp256k1_fe_set_int(secp256k1_fe *r, int a);
 
-/** Sets a field element equal to zero, initializing all fields. */
+/** Clear a field element to prevent leaking sensitive information. */
 static void secp256k1_fe_clear(secp256k1_fe *a);
 
 /** Verify whether a field element is zero. Requires the input to be normalized. */

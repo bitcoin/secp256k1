@@ -39,7 +39,7 @@ static void secp256k1_num_get_bin(unsigned char *r, unsigned int rlen, const sec
     if (len > shift) {
         memcpy(r + rlen - len + shift, tmp + shift, len - shift);
     }
-    memset(tmp, 0, sizeof(tmp));
+    memclear(tmp, sizeof(tmp));
 }
 
 static void secp256k1_num_set_bin(secp256k1_num *r, const unsigned char *a, unsigned int alen) {
@@ -85,7 +85,7 @@ static void secp256k1_num_mod(secp256k1_num *r, const secp256k1_num *m) {
     if (r->limbs >= m->limbs) {
         mp_limb_t t[2*NUM_LIMBS];
         mpn_tdiv_qr(t, r->data, 0, r->data, r->limbs, m->data, m->limbs);
-        memset(t, 0, sizeof(t));
+        memclear(t, sizeof(t));
         r->limbs = m->limbs;
         while (r->limbs > 1 && r->data[r->limbs-1]==0) {
             r->limbs--;
@@ -139,9 +139,9 @@ static void secp256k1_num_mod_inverse(secp256k1_num *r, const secp256k1_num *a, 
     } else {
         r->limbs = sn;
     }
-    memset(g, 0, sizeof(g));
-    memset(u, 0, sizeof(u));
-    memset(v, 0, sizeof(v));
+    memclear(g, sizeof(g));
+    memclear(u, sizeof(u));
+    memclear(v, sizeof(v));
 }
 
 static int secp256k1_num_jacobi(const secp256k1_num *a, const secp256k1_num *b) {
@@ -256,7 +256,7 @@ static void secp256k1_num_mul(secp256k1_num *r, const secp256k1_num *a, const se
     VERIFY_CHECK(r->limbs <= 2*NUM_LIMBS);
     mpn_copyi(r->data, tmp, r->limbs);
     r->neg = a->neg ^ b->neg;
-    memset(tmp, 0, sizeof(tmp));
+    memclear(tmp, sizeof(tmp));
 }
 
 static void secp256k1_num_shift(secp256k1_num *r, int bits) {
