@@ -98,6 +98,7 @@ tests_CPPFLAGS = -DSECP256K1_BUILD -I$(top_srcdir)/src -I$(top_srcdir)/include $
 if VALGRIND_ENABLED
 tests_CPPFLAGS += -DVALGRIND
 noinst_PROGRAMS += valgrind_ctime_test
+TESTS += valgrind_ctime_test.sh
 valgrind_ctime_test_SOURCES = src/valgrind_ctime_test.c
 valgrind_ctime_test_LDADD = libsecp256k1.la $(SECP_LIBS) $(SECP_TEST_LIBS) $(COMMON_LIB)
 endif
@@ -143,7 +144,7 @@ src/ecmult_static_context.h: $(gen_context_BIN)
 CLEANFILES = $(gen_context_BIN) src/ecmult_static_context.h
 endif
 
-EXTRA_DIST = autogen.sh src/gen_context.c src/basic-config.h
+EXTRA_DIST = autogen.sh valgrind_ctime_test.sh src/gen_context.c src/basic-config.h
 
 if ENABLE_MODULE_ECDH
 include src/modules/ecdh/Makefile.am.include

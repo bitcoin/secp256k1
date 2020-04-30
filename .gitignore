@@ -31,6 +31,8 @@ libtool
 *.lo
 *.o
 *~
+*.log
+*.trs
 src/libsecp256k1-config.h
 src/libsecp256k1-config.h.in
 src/ecmult_static_context.h

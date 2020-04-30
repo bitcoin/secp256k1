@@ -5,13 +5,12 @@ addons:
     packages:
       - libgmp-dev
       - valgrind
-      - libtool-bin
 compiler:
   - clang
   - gcc
 env:
   global:
-    - FIELD=auto  BIGNUM=auto  SCALAR=auto  ENDOMORPHISM=no  STATICPRECOMPUTATION=yes  ECMULTGENPRECISION=auto  ASM=no  BUILD=check  EXTRAFLAGS=  HOST=  ECDH=no  RECOVERY=no  EXPERIMENTAL=no CTIMETEST=yes BENCH=yes SECP256K1_BENCH_ITERS=2
+    - FIELD=auto  BIGNUM=auto  SCALAR=auto  ENDOMORPHISM=no  STATICPRECOMPUTATION=yes  ECMULTGENPRECISION=auto  ASM=no  BUILD=check  EXTRAFLAGS=  HOST=  ECDH=no  RECOVERY=no  EXPERIMENTAL=no BENCH=yes SECP256K1_BENCH_ITERS=2
   matrix:
     - SCALAR=32bit    RECOVERY=yes
     - SCALAR=32bit    FIELD=32bit       ECDH=yes  EXPERIMENTAL=yes
@@ -25,7 +24,7 @@ env:
     - BIGNUM=no
     - BIGNUM=no       ENDOMORPHISM=yes RECOVERY=yes EXPERIMENTAL=yes
     - BIGNUM=no       STATICPRECOMPUTATION=no
-    - BUILD=distcheck CTIMETEST= BENCH=
+    - BUILD=distcheck BENCH=
     - EXTRAFLAGS=CPPFLAGS=-DDETERMINISTIC
     - EXTRAFLAGS=CFLAGS=-O0
     - ECMULTGENPRECISION=2
@@ -41,7 +40,6 @@ matrix:
             - gcc-multilib
             - libgmp-dev:i386
             - valgrind
-            - libtool-bin
             - libc6-dbg:i386
     - compiler: clang
       env: HOST=i686-linux-gnu
@@ -50,7 +48,6 @@ matrix:
           packages:
             - gcc-multilib
             - valgrind
-            - libtool-bin
             - libc6-dbg:i386
     - compiler: gcc
       env: HOST=i686-linux-gnu ENDOMORPHISM=yes
@@ -59,7 +56,6 @@ matrix:
           packages:
             - gcc-multilib
             - valgrind
-            - libtool-bin
             - libc6-dbg:i386
     - compiler: gcc
       env: HOST=i686-linux-gnu
@@ -69,7 +65,6 @@ matrix:
             - gcc-multilib
             - libgmp-dev:i386
             - valgrind
-            - libtool-bin
             - libc6-dbg:i386
     - compiler: gcc
       env:
@@ -87,6 +82,8 @@ script:
  - if [ "x$HOST" = "xi686-linux-gnu" ]; then export CC="$CC -m32"; fi
  - ./configure --enable-experimental=$EXPERIMENTAL --enable-endomorphism=$ENDOMORPHISM --with-field=$FIELD --with-bignum=$BIGNUM --with-asm=$ASM --with-scalar=$SCALAR --enable-ecmult-static-precomputation=$STATICPRECOMPUTATION --with-ecmult-gen-precision=$ECMULTGENPRECISION --enable-module-ecdh=$ECDH --enable-module-recovery=$RECOVERY $EXTRAFLAGS $USE_HOST
  - if [ -n "$BUILD" ]; then make -j2 $BUILD; fi
+ - # Verify that `make check` has not skipped any tests, which should never happen on Travis.
+ - grep --quiet '^# SKIP. *0$' test-suite.log
  - # travis_wait extends the 10 minutes without output allowed (https://docs.travis-ci.com/user/common-build-problems/#build-times-out-because-no-output-was-received)
  - # the `--error-exitcode` is required to make the test fail if valgrind found errors, otherwise it'll return 0 (http://valgrind.org/docs/manual/manual-core.html)
  - if [ -n "$VALGRIND" ]; then
@@ -100,12 +97,10 @@ script:
      if [ "$RECOVERY" == "yes" ]; then $EXEC ./bench_recover &>> bench.log; fi &&
      if [ "$ECDH" == "yes" ]; then $EXEC ./bench_ecdh &>> bench.log; fi;
    fi
- - if [ -n "$CTIMETEST" ]; then
-   libtool --mode=execute valgrind  ./valgrind_ctime_test &> valgrind_ctime_test.log;
-   fi
 
 after_script:
+    - cat ./test-suite.log
     - cat ./tests.log
     - cat ./exhaustive_tests.log
-    - cat ./valgrind_ctime_test.log
+    - cat ./valgrind_ctime_test.sh.log
     - cat ./bench.log
