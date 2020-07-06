@@ -1,0 +1,8 @@
+include_HEADERS += include/secp256k1_multiset.h
+noinst_HEADERS += src/modules/multiset/main_impl.h
+noinst_HEADERS += src/modules/multiset/tests_impl.h
+if USE_BENCHMARK
+noinst_PROGRAMS += bench_multiset
+bench_multiset_SOURCES = src/bench_multiset.c
+bench_multiset_LDADD = libsecp256k1.la $(SECP_LIBS) $(COMMON_LIB)
+endif
