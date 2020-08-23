@@ -11,7 +11,7 @@
 #include "scratch.h"
 
 static secp256k1_scratch* secp256k1_scratch_create(const secp256k1_callback* error_callback, size_t size) {
-    const size_t base_alloc = ((sizeof(secp256k1_scratch) + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+    const size_t base_alloc = ROUND_TO_ALIGN(sizeof(secp256k1_scratch));
     void *alloc = checked_malloc(error_callback, base_alloc + size);
     secp256k1_scratch* ret = (secp256k1_scratch *)alloc;
     if (ret != NULL) {
@@ -83,6 +83,16 @@ static void *secp256k1_scratch_alloc(const secp256k1_callback* error_callback, s
     scratch->alloc_size += size;
 
     return ret;
+}
+
+static size_t secp256k1_scratch_alloc_size(size_t *sizes, size_t n_sizes) {
+    size_t i;
+    size_t sum = 0;
+
+    for (i = 0; i < n_sizes; i++) {
+        sum += ROUND_TO_ALIGN(sizes[i]);
+    }
+    return sum;
 }
 
 #endif

@@ -33,10 +33,17 @@ static size_t secp256k1_scratch_checkpoint(const secp256k1_callback* error_callb
  *  undoing all allocations since that point. */
 static void secp256k1_scratch_apply_checkpoint(const secp256k1_callback* error_callback, secp256k1_scratch* scratch, size_t checkpoint);
 
-/** Returns the maximum allocation the scratch space will allow */
+/** Returns the maximum allocation the scratch space will allow. If you
+ * care about the padding due to alignment yourself, you can call this
+ * function with zero n_objects. */
 static size_t secp256k1_scratch_max_allocation(const secp256k1_callback* error_callback, const secp256k1_scratch* scratch, size_t n_objects);
 
-/** Returns a pointer into the most recently allocated frame, or NULL if there is insufficient available space */
+/** Returns a pointer into the most recently allocated frame, or NULL if there is insufficient available space. */
 static void *secp256k1_scratch_alloc(const secp256k1_callback* error_callback, secp256k1_scratch* scratch, size_t n);
+
+/* Returns the amount that will be allocated if scratch_alloc is called
+ * n_sizes times and each time with the corresponding element in the
+ * sizes array as n argument. */
+static size_t secp256k1_scratch_alloc_size(size_t *sizes, size_t n_sizes);
 
 #endif

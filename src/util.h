@@ -113,7 +113,7 @@ static SECP256K1_INLINE void *checked_realloc(const secp256k1_callback* cb, void
 #define ALIGNMENT 16
 #endif
 
-#define ROUND_TO_ALIGN(size) (((size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT)
+#define ROUND_TO_ALIGN(size) ((((size) + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT)
 
 /* Assume there is a contiguous memory object with bounds [base, base + max_size)
  * of which the memory range [base, *prealloc_ptr) is already allocated for usage,

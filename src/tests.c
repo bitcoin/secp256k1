@@ -335,6 +335,7 @@ void run_context_tests(int use_prealloc) {
 void run_scratch_tests(void) {
     const size_t adj_alloc = ((500 + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 
+    int i = 0;
     int32_t ecount = 0;
     size_t checkpoint;
     size_t checkpoint_2;
@@ -387,6 +388,22 @@ void run_scratch_tests(void) {
     secp256k1_scratch_apply_checkpoint(&none->error_callback, scratch, (size_t) -1); /* this is just wildly invalid */
     CHECK(ecount == 2);
 
+    /* test alloc_size */
+    CHECK(scratch->alloc_size == 0);
+    for (i = 0; i < 100; i++) {
+        size_t sizes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        static const size_t N_SIZES = sizeof(sizes)/sizeof(sizes[0]);
+        size_t j;
+
+        sizes[0] = i;
+        checkpoint = secp256k1_scratch_checkpoint(&none->error_callback, scratch);
+        for (j = 0; j < N_SIZES; j++) {
+            CHECK(secp256k1_scratch_alloc(&ctx->error_callback, scratch, sizes[j]) != NULL);
+        }
+        CHECK(scratch->alloc_size == secp256k1_scratch_alloc_size(sizes, N_SIZES));
+        secp256k1_scratch_apply_checkpoint(&none->error_callback, scratch, checkpoint);
+    }
+
     /* try to use badly initialized scratch space */
     secp256k1_scratch_space_destroy(none, scratch);
     memset(&local_scratch, 0, sizeof(local_scratch));
@@ -397,6 +414,7 @@ void run_scratch_tests(void) {
     CHECK(ecount == 4);
     secp256k1_scratch_space_destroy(none, scratch);
     CHECK(ecount == 5);
+
 
     /* cleanup */
     secp256k1_scratch_space_destroy(none, NULL); /* no-op */
@@ -2991,6 +3009,40 @@ void test_ecmult_multi_batch_single(secp256k1_ecmult_multi_func ecmult_multi) {
     secp256k1_scratch_destroy(&ctx->error_callback, scratch_empty);
 }
 
+void test_ecmult_multi_strauss_scratch_size(void) {
+    size_t n_points;
+
+    for(n_points = 0; n_points < ECMULT_PIPPENGER_THRESHOLD*2; n_points++) {
+        size_t scratch_size = secp256k1_strauss_scratch_size(n_points);
+        secp256k1_scratch *scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
+        CHECK(n_points == secp256k1_strauss_max_points(&ctx->error_callback, scratch));
+        {
+            secp256k1_gej *points;
+            secp256k1_scalar *scalars;
+            struct secp256k1_strauss_state state;
+            size_t checkpoint = secp256k1_scratch_checkpoint(&ctx->error_callback, scratch);
+            CHECK(secp256k1_ecmult_strauss_batch_allocate(&ctx->error_callback, scratch, n_points, &points, &scalars, &state));
+            CHECK(scratch->alloc_size == scratch_size);
+            secp256k1_scratch_apply_checkpoint(&ctx->error_callback, scratch, checkpoint);
+        }
+        secp256k1_scratch_destroy(&ctx->error_callback, scratch);
+    }
+}
+
+/* Spot check that any scratch space size is greater or equal to then the size required
+ * to fit secp256k1_strauss_max_points many points. */
+void test_ecmult_multi_strauss_max_points(void) {
+    size_t scratch_size = secp256k1_strauss_scratch_size_raw(1, 0);
+    size_t max_scratch_size = secp256k1_strauss_scratch_size_raw(1, 1) + 1;
+    for (; scratch_size < max_scratch_size; scratch_size++) {
+        secp256k1_scratch *scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
+        size_t n_points = secp256k1_strauss_max_points(&ctx->error_callback, scratch);
+        CHECK(secp256k1_scratch_max_allocation(&ctx->error_callback, scratch, 0) == scratch_size);
+        CHECK(scratch_size >= secp256k1_strauss_scratch_size(n_points));
+        secp256k1_scratch_destroy(&ctx->error_callback, scratch);
+    }
+}
+
 void test_secp256k1_pippenger_bucket_window_inv(void) {
     int i;
 
@@ -3011,18 +3063,20 @@ void test_secp256k1_pippenger_bucket_window_inv(void) {
 
 /**
  * Probabilistically test the function returning the maximum number of possible points
- * for a given scratch space.
+ * for a given scratch space. This works by trying various different scratch sizes and
+ * checking that the resulting max_points actually fit into the scratch space.
  */
 void test_ecmult_multi_pippenger_max_points(void) {
     size_t scratch_size = secp256k1_rand_int(256);
-    size_t max_size = secp256k1_pippenger_scratch_size(secp256k1_pippenger_bucket_window_inv(PIPPENGER_MAX_BUCKET_WINDOW-1)+512, 12);
+    /* Pick a max scratch size that permits using enough points to require the
+     * maximum bucket window */
+    size_t max_points = secp256k1_pippenger_bucket_window_inv(PIPPENGER_MAX_BUCKET_WINDOW-1)+512;
+    size_t max_size = secp256k1_pippenger_scratch_size(max_points, PIPPENGER_MAX_BUCKET_WINDOW);
     secp256k1_scratch *scratch;
     size_t n_points_supported;
     int bucket_window = 0;
 
-    for(; scratch_size < max_size; scratch_size+=256) {
-        size_t i;
-        size_t total_alloc;
+    for(; scratch_size < max_size; scratch_size += 256) {
         size_t checkpoint;
         scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
         CHECK(scratch != NULL);
@@ -3033,13 +3087,18 @@ void test_ecmult_multi_pippenger_max_points(void) {
             continue;
         }
         bucket_window = secp256k1_pippenger_bucket_window(n_points_supported);
-        /* allocate `total_alloc` bytes over `PIPPENGER_SCRATCH_OBJECTS` many allocations */
-        total_alloc = secp256k1_pippenger_scratch_size(n_points_supported, bucket_window);
-        for (i = 0; i < PIPPENGER_SCRATCH_OBJECTS - 1; i++) {
-            CHECK(secp256k1_scratch_alloc(&ctx->error_callback, scratch, 1));
-            total_alloc--;
+        {
+            /* Check that n_points_supported actually fit into the scratch
+             * space and that pippenger_scratch_size matches what's actually
+             * allocated */
+            secp256k1_ge *points;
+            secp256k1_scalar *scalars;
+            secp256k1_gej *buckets;
+            struct secp256k1_pippenger_state *state_space;
+            size_t entries = secp256k1_pippenger_entries(n_points_supported);
+            CHECK(secp256k1_ecmult_pippenger_batch_allocate(&ctx->error_callback, scratch, entries, bucket_window, &points, &scalars, &buckets, &state_space));
+            CHECK(scratch->alloc_size == secp256k1_pippenger_scratch_size(n_points_supported, bucket_window));
         }
-        CHECK(secp256k1_scratch_alloc(&ctx->error_callback, scratch, total_alloc));
         secp256k1_scratch_apply_checkpoint(&ctx->error_callback, scratch, checkpoint);
         secp256k1_scratch_destroy(&ctx->error_callback, scratch);
     }
@@ -3137,20 +3196,19 @@ void test_ecmult_multi_batching(void) {
     /* Test with space for 1 point in pippenger. That's not enough because
      * ecmult_multi selects strauss which requires more memory. It should
      * therefore select the simple algorithm. */
-    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_pippenger_scratch_size(1, 1) + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_pippenger_scratch_size(1, 1));
     CHECK(secp256k1_ecmult_multi_var(&ctx->error_callback, &ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, n_points));
     secp256k1_gej_add_var(&r, &r, &r2, NULL);
     CHECK(secp256k1_gej_is_infinity(&r));
     secp256k1_scratch_destroy(&ctx->error_callback, scratch);
 
     for(i = 1; i <= n_points; i++) {
-        if (i > ECMULT_PIPPENGER_THRESHOLD) {
-            int bucket_window = secp256k1_pippenger_bucket_window(i);
-            size_t scratch_size = secp256k1_pippenger_scratch_size(i, bucket_window);
-            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+        if (i >= ECMULT_PIPPENGER_THRESHOLD) {
+            size_t scratch_size = secp256k1_ecmult_multi_scratch_size(i);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
         } else {
-            size_t scratch_size = secp256k1_strauss_scratch_size(i);
-            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+            size_t scratch_size = secp256k1_ecmult_multi_scratch_size(i);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
         }
         CHECK(secp256k1_ecmult_multi_var(&ctx->error_callback, &ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, n_points));
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
@@ -3161,9 +3219,20 @@ void test_ecmult_multi_batching(void) {
     free(pt);
 }
 
+void test_ecmult_multi_scratch_size(void) {
+    /* test ECMULT_MAX_POINTS_PER_BATCH limit */
+    size_t n_points = ECMULT_MAX_POINTS_PER_BATCH + 1;
+    size_t scratch_size = secp256k1_ecmult_multi_scratch_size(n_points);
+    int expected_bucket_window = secp256k1_pippenger_bucket_window(n_points - 1);
+    size_t expected_scratch_size = secp256k1_pippenger_scratch_size(n_points - 1, expected_bucket_window);
+    CHECK(expected_scratch_size == scratch_size);
+}
+
 void run_ecmult_multi_tests(void) {
     secp256k1_scratch *scratch;
 
+    test_ecmult_multi_strauss_scratch_size();
+    test_ecmult_multi_strauss_max_points();
     test_secp256k1_pippenger_bucket_window_inv();
     test_ecmult_multi_pippenger_max_points();
     scratch = secp256k1_scratch_create(&ctx->error_callback, 819200);
@@ -3176,12 +3245,13 @@ void run_ecmult_multi_tests(void) {
     secp256k1_scratch_destroy(&ctx->error_callback, scratch);
 
     /* Run test_ecmult_multi with space for exactly one point */
-    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_strauss_scratch_size(1) + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_strauss_scratch_size(1));
     test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
     secp256k1_scratch_destroy(&ctx->error_callback, scratch);
 
     test_ecmult_multi_batch_size_helper();
     test_ecmult_multi_batching();
+    test_ecmult_multi_scratch_size();
 }
 
 void test_wnaf(const secp256k1_scalar *number, int w) {
