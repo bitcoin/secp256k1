@@ -540,37 +540,48 @@ void run_rfc6979_hmac_sha256_tests(void) {
 
 /***** RANDOM TESTS *****/
 
-void test_rand_bits(int rand32, int bits) {
-    /* (1-1/2^B)^rounds[B] < 1/10^9, so rounds is the number of iterations to
+void test_rand_bits(int rand32, int b) {
+    /* 1-(1-(1-1/2^U)^rounds[U])^(2^U) < 1/10^9, so rounds is the number of iterations to
      * get a false negative chance below once in a billion */
-    static const unsigned int rounds[7] = {1, 30, 73, 156, 322, 653, 1316};
-    /* We try multiplying the results with various odd numbers, which shouldn't
-     * influence the uniform distribution modulo a power of 2. */
-    static const uint32_t mults[6] = {1, 3, 21, 289, 0x9999, 0x80402011};
-    /* We only select up to 6 bits from the output to analyse */
-    unsigned int usebits = bits > 6 ? 6 : bits;
-    unsigned int maxshift = bits - usebits;
-    /* For each of the maxshift+1 usebits-bit sequences inside a bits-bit
-       number, track all observed outcomes, one per bit in a uint64_t. */
-    uint64_t x[6][27] = {{0}};
-    unsigned int i, shift, m;
-    /* Multiply the output of all rand calls with the odd number m, which
-       should not change the uniformity of its distribution. */
-    for (i = 0; i < rounds[usebits]; i++) {
-        uint32_t r = (rand32 ? secp256k1_rand32() : secp256k1_rand_bits(bits));
-        CHECK((((uint64_t)r) >> bits) == 0);
-        for (m = 0; m < sizeof(mults) / sizeof(mults[0]); m++) {
-            uint32_t rm = r * mults[m];
-            for (shift = 0; shift <= maxshift; shift++) {
-                x[m][shift] |= (((uint64_t)1) << ((rm >> shift) & ((1 << usebits) - 1)));
-            }
+    static const int rounds[9] = {1, 31, 77, 171, 365, 762, 1580, 3262, 6712};
+    /* How many bits we will select out of the b bit result, to check whether all
+     * their combinations are reached. */
+    int u = b > 8 ? 8 : b;
+    /* b-size array with a permutation (only the first u entries will be
+     * randomized). */
+    unsigned int bitperm[32];
+    /* The following 2**u bit array contains a 1 for every u-bit combination
+     * we still expect to see. */
+    uint64_t x[4] = {0};
+    int i, m;
+    /* Initialize bitperm and x */
+    for (i = 0; i < b; i++) {
+        bitperm[i] = i;
+        x[i >> 6] |= 1ULL << (i & 0x3F);
+    }
+    /* Permute the first u entries of bitperm. */
+    for (i = 0; i < u; i++) {
+        int pos = secp256k1_rand_int(b - i) + i;
+        if (pos > i) {
+            unsigned int tmp = bitperm[i];
+            bitperm[i] = bitperm[pos];
+            bitperm[pos] = tmp;
         }
     }
-    for (m = 0; m < sizeof(mults) / sizeof(mults[0]); m++) {
-        for (shift = 0; shift <= maxshift; shift++) {
-            /* Test that the lower usebits bits of x[shift] are 1 */
-            CHECK(((~x[m][shift]) << (64 - (1 << usebits))) == 0);
+    /* Iterate rounds[u] times. */
+    for (m = 0; m < rounds[u]; m++) {
+        int val = 0;
+        uint32_t r = (rand32 ? secp256k1_rand32() : secp256k1_rand_bits(b));
+        CHECK((((uint64_t)r) >> b) == 0);
+        /* Construct a u-bit value val using u bits from the b-bit value r. */
+        for (i = 0; i < u; i++) {
+            val |= ((r >> bitperm[i]) & 1) << i;
         }
+        /* Unset the respective bit in x. */
+        x[val >> 6] &= ~(1ULL << (val & 0x3F));
+    }
+    for (i = 0; i < 4; i++) {
+        CHECK(x[i] == 0);
     }
 }
 
@@ -592,10 +603,13 @@ void test_rand_int(uint32_t range, uint32_t subrange) {
 }
 
 void run_rand_bits(void) {
+    int i;
     size_t b;
-    test_rand_bits(1, 32);
-    for (b = 1; b <= 32; b++) {
-        test_rand_bits(0, b);
+    for (i = 0; i < 2*count; i++) {
+        test_rand_bits(1, 32);
+        for (b = 1; b <= 32; b++) {
+            test_rand_bits(0, b);
+        }
     }
 }
 
