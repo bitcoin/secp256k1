@@ -67,7 +67,7 @@ esac
 
 CFLAGS="-W $CFLAGS"
 
-warn_CFLAGS="-std=c89 -pedantic -Wall -Wextra -Wcast-align -Wnested-externs -Wshadow -Wstrict-prototypes -Wno-unused-function -Wno-long-long -Wno-overlength-strings"
+warn_CFLAGS="-std=c89 -pedantic -Wall -Wextra -Wcast-align -Wnested-externs -Wshadow -Wstrict-prototypes -Wno-unused-function"
 saved_CFLAGS="$CFLAGS"
 CFLAGS="$warn_CFLAGS $CFLAGS"
 AC_MSG_CHECKING([if ${CC} supports ${warn_CFLAGS}])
@@ -202,7 +202,7 @@ if test x"$use_ecmult_static_precomputation" != x"no"; then
   SAVE_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS_FOR_BUILD"
 
-  warn_CFLAGS_FOR_BUILD="-Wall -Wextra -Wno-unused-function"
+  warn_CFLAGS_FOR_BUILD="-std=c89 -pedantic -Wall -Wextra -Wcast-align -Wnested-externs -Wshadow -Wstrict-prototypes -Wno-unused-function"
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$warn_CFLAGS_FOR_BUILD $CFLAGS"
   AC_MSG_CHECKING([if native ${CC_FOR_BUILD} supports ${warn_CFLAGS_FOR_BUILD}])

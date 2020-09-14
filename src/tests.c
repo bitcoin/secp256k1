@@ -1171,8 +1171,8 @@ void run_scalar_tests(void) {
     {
         /* Does check_overflow check catch all ones? */
         static const secp256k1_scalar overflowed = SECP256K1_SCALAR_CONST(
-            0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
-            0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
+            UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF),
+            UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF)
         );
         CHECK(secp256k1_scalar_check_overflow(&overflowed));
     }
@@ -1829,12 +1829,12 @@ void run_field_convert(void) {
         0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40
     };
     static const secp256k1_fe_storage fes = SECP256K1_FE_STORAGE_CONST(
-        0x00010203UL, 0x04050607UL, 0x11121314UL, 0x15161718UL,
-        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL
+        UINT32_C(0x00010203), UINT32_C(0x04050607), UINT32_C(0x11121314), UINT32_C(0x15161718),
+        UINT32_C(0x22232425), UINT32_C(0x26272829), UINT32_C(0x33343536), UINT32_C(0x37383940)
     );
     static const secp256k1_fe fe = SECP256K1_FE_CONST(
-        0x00010203UL, 0x04050607UL, 0x11121314UL, 0x15161718UL,
-        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL
+        UINT32_C(0x00010203), UINT32_C(0x04050607), UINT32_C(0x11121314), UINT32_C(0x15161718),
+        UINT32_C(0x22232425), UINT32_C(0x26272829), UINT32_C(0x33343536), UINT32_C(0x37383940)
     );
     secp256k1_fe fe2;
     unsigned char b322[32];

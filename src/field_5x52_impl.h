@@ -33,17 +33,17 @@ static void secp256k1_fe_verify(const secp256k1_fe *a) {
     const uint64_t *d = a->n;
     int m = a->normalized ? 1 : 2 * a->magnitude, r = 1;
    /* secp256k1 'p' value defined in "Standards for Efficient Cryptography" (SEC2) 2.7.1. */
-    r &= (d[0] <= 0xFFFFFFFFFFFFFULL * m);
-    r &= (d[1] <= 0xFFFFFFFFFFFFFULL * m);
-    r &= (d[2] <= 0xFFFFFFFFFFFFFULL * m);
-    r &= (d[3] <= 0xFFFFFFFFFFFFFULL * m);
-    r &= (d[4] <= 0x0FFFFFFFFFFFFULL * m);
+    r &= (d[0] <= UINT64_C(0xFFFFFFFFFFFFF) * m);
+    r &= (d[1] <= UINT64_C(0xFFFFFFFFFFFFF) * m);
+    r &= (d[2] <= UINT64_C(0xFFFFFFFFFFFFF) * m);
+    r &= (d[3] <= UINT64_C(0xFFFFFFFFFFFFF) * m);
+    r &= (d[4] <= UINT64_C(0x0FFFFFFFFFFFF) * m);
     r &= (a->magnitude >= 0);
     r &= (a->magnitude <= 2048);
     if (a->normalized) {
         r &= (a->magnitude <= 1);
-        if (r && (d[4] == 0x0FFFFFFFFFFFFULL) && ((d[3] & d[2] & d[1]) == 0xFFFFFFFFFFFFFULL)) {
-            r &= (d[0] < 0xFFFFEFFFFFC2FULL);
+        if (r && (d[4] == UINT64_C(0x0FFFFFFFFFFFF)) && ((d[3] & d[2] & d[1]) == UINT64_C(0xFFFFFFFFFFFFF))) {
+            r &= (d[0] < UINT64_C(0xFFFFEFFFFFC2F));
         }
     }
     VERIFY_CHECK(r == 1);
@@ -55,34 +55,34 @@ static void secp256k1_fe_normalize(secp256k1_fe *r) {
 
     /* Reduce t4 at the start so there will be at most a single carry from the first pass */
     uint64_t m;
-    uint64_t x = t4 >> 48; t4 &= 0x0FFFFFFFFFFFFULL;
+    uint64_t x = t4 >> 48; t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x1000003D1ULL;
-    t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL;
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL; m = t1;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL; m &= t2;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL; m &= t3;
+    t0 += x * UINT64_C(0x1000003D1);
+    t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF); m = t1;
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF); m &= t2;
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF); m &= t3;
 
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t4 >> 49 == 0);
 
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
-    x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFFULL) & (m == 0xFFFFFFFFFFFFFULL)
-        & (t0 >= 0xFFFFEFFFFFC2FULL));
+    x = (t4 >> 48) | ((t4 == UINT64_C(0x0FFFFFFFFFFFF)) & (m == UINT64_C(0xFFFFFFFFFFFFF))
+        & (t0 >= UINT64_C(0xFFFFEFFFFFC2F)));
 
     /* Apply the final reduction (for constant-time behaviour, we do it always) */
-    t0 += x * 0x1000003D1ULL;
-    t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL;
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL;
+    t0 += x * UINT64_C(0x1000003D1);
+    t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF);
 
     /* If t4 didn't carry to bit 48 already, then it should have after any final reduction */
     VERIFY_CHECK(t4 >> 48 == x);
 
     /* Mask off the possible multiple of 2^256 from the final reduction */
-    t4 &= 0x0FFFFFFFFFFFFULL;
+    t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
 
@@ -97,14 +97,14 @@ static void secp256k1_fe_normalize_weak(secp256k1_fe *r) {
     uint64_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4];
 
     /* Reduce t4 at the start so there will be at most a single carry from the first pass */
-    uint64_t x = t4 >> 48; t4 &= 0x0FFFFFFFFFFFFULL;
+    uint64_t x = t4 >> 48; t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x1000003D1ULL;
-    t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL;
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL;
+    t0 += x * UINT64_C(0x1000003D1);
+    t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF);
 
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t4 >> 49 == 0);
@@ -122,34 +122,34 @@ static void secp256k1_fe_normalize_var(secp256k1_fe *r) {
 
     /* Reduce t4 at the start so there will be at most a single carry from the first pass */
     uint64_t m;
-    uint64_t x = t4 >> 48; t4 &= 0x0FFFFFFFFFFFFULL;
+    uint64_t x = t4 >> 48; t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x1000003D1ULL;
-    t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL;
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL; m = t1;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL; m &= t2;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL; m &= t3;
+    t0 += x * UINT64_C(0x1000003D1);
+    t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF);
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF); m = t1;
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF); m &= t2;
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF); m &= t3;
 
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t4 >> 49 == 0);
 
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
-    x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFFULL) & (m == 0xFFFFFFFFFFFFFULL)
-        & (t0 >= 0xFFFFEFFFFFC2FULL));
+    x = (t4 >> 48) | ((t4 == UINT64_C(0x0FFFFFFFFFFFF)) & (m == UINT64_C(0xFFFFFFFFFFFFF))
+        & (t0 >= UINT64_C(0xFFFFEFFFFFC2F)));
 
     if (x) {
-        t0 += 0x1000003D1ULL;
-        t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL;
-        t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL;
-        t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL;
-        t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL;
+        t0 += UINT64_C(0x1000003D1);
+        t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF);
+        t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF);
+        t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF);
+        t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF);
 
         /* If t4 didn't carry to bit 48 already, then it should have after any final reduction */
         VERIFY_CHECK(t4 >> 48 == x);
 
         /* Mask off the possible multiple of 2^256 from the final reduction */
-        t4 &= 0x0FFFFFFFFFFFFULL;
+        t4 &= UINT64_C(0x0FFFFFFFFFFFF);
     }
 
     r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
@@ -168,20 +168,20 @@ static int secp256k1_fe_normalizes_to_zero(secp256k1_fe *r) {
     uint64_t z0, z1;
 
     /* Reduce t4 at the start so there will be at most a single carry from the first pass */
-    uint64_t x = t4 >> 48; t4 &= 0x0FFFFFFFFFFFFULL;
+    uint64_t x = t4 >> 48; t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x1000003D1ULL;
-    t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFFULL; z0  = t0; z1  = t0 ^ 0x1000003D0ULL;
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL; z0 |= t1; z1 &= t1;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL; z0 |= t2; z1 &= t2;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL; z0 |= t3; z1 &= t3;
-                                                z0 |= t4; z1 &= t4 ^ 0xF000000000000ULL;
+    t0 += x * UINT64_C(0x1000003D1);
+    t1 += (t0 >> 52); t0 &= UINT64_C(0xFFFFFFFFFFFFF); z0  = t0; z1  = t0 ^ UINT64_C(0x1000003D0);
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t1; z1 &= t1;
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t2; z1 &= t2;
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t3; z1 &= t3;
+                                                       z0 |= t4; z1 &= t4 ^ UINT64_C(0xF000000000000);
 
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t4 >> 49 == 0);
 
-    return (z0 == 0) | (z1 == 0xFFFFFFFFFFFFFULL);
+    return (z0 == 0) | (z1 == UINT64_C(0xFFFFFFFFFFFFF));
 }
 
 static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r) {
@@ -196,14 +196,14 @@ static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r) {
     x = t4 >> 48;
 
     /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x1000003D1ULL;
+    t0 += x * UINT64_C(0x1000003D1);
 
     /* z0 tracks a possible raw value of 0, z1 tracks a possible raw value of P */
-    z0 = t0 & 0xFFFFFFFFFFFFFULL;
-    z1 = z0 ^ 0x1000003D0ULL;
+    z0 = t0 & UINT64_C(0xFFFFFFFFFFFFF);
+    z1 = z0 ^ UINT64_C(0x1000003D0);
 
     /* Fast return path should catch the majority of cases */
-    if ((z0 != 0ULL) & (z1 != 0xFFFFFFFFFFFFFULL)) {
+    if ((z0 != UINT64_C(0)) & (z1 != UINT64_C(0xFFFFFFFFFFFFF))) {
         return 0;
     }
 
@@ -211,18 +211,18 @@ static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r) {
     t2 = r->n[2];
     t3 = r->n[3];
 
-    t4 &= 0x0FFFFFFFFFFFFULL;
+    t4 &= UINT64_C(0x0FFFFFFFFFFFF);
 
     t1 += (t0 >> 52);
-    t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFFULL; z0 |= t1; z1 &= t1;
-    t3 += (t2 >> 52); t2 &= 0xFFFFFFFFFFFFFULL; z0 |= t2; z1 &= t2;
-    t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFFULL; z0 |= t3; z1 &= t3;
-                                                z0 |= t4; z1 &= t4 ^ 0xF000000000000ULL;
+    t2 += (t1 >> 52); t1 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t1; z1 &= t1;
+    t3 += (t2 >> 52); t2 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t2; z1 &= t2;
+    t4 += (t3 >> 52); t3 &= UINT64_C(0xFFFFFFFFFFFFF); z0 |= t3; z1 &= t3;
+                                                       z0 |= t4; z1 &= t4 ^ UINT64_C(0xF000000000000);
 
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t4 >> 49 == 0);
 
-    return (z0 == 0) | (z1 == 0xFFFFFFFFFFFFFULL);
+    return (z0 == 0) | (z1 == UINT64_C(0xFFFFFFFFFFFFF));
 }
 
 SECP256K1_INLINE static void secp256k1_fe_set_int(secp256k1_fe *r, int a) {
@@ -318,7 +318,7 @@ static int secp256k1_fe_set_b32(secp256k1_fe *r, const unsigned char *a) {
             | ((uint64_t)a[2] << 24)
             | ((uint64_t)a[1] << 32)
             | ((uint64_t)a[0] << 40);
-    ret = !((r->n[4] == 0x0FFFFFFFFFFFFULL) & ((r->n[3] & r->n[2] & r->n[1]) == 0xFFFFFFFFFFFFFULL) & (r->n[0] >= 0xFFFFEFFFFFC2FULL));
+    ret = !((r->n[4] == UINT64_C(0x0FFFFFFFFFFFF)) & ((r->n[3] & r->n[2] & r->n[1]) == UINT64_C(0xFFFFFFFFFFFFF)) & (r->n[0] >= UINT64_C(0xFFFFEFFFFFC2F)));
 #ifdef VERIFY
     r->magnitude = 1;
     if (ret) {
@@ -376,11 +376,11 @@ SECP256K1_INLINE static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k
     VERIFY_CHECK(a->magnitude <= m);
     secp256k1_fe_verify(a);
 #endif
-    r->n[0] = 0xFFFFEFFFFFC2FULL * 2 * (m + 1) - a->n[0];
-    r->n[1] = 0xFFFFFFFFFFFFFULL * 2 * (m + 1) - a->n[1];
-    r->n[2] = 0xFFFFFFFFFFFFFULL * 2 * (m + 1) - a->n[2];
-    r->n[3] = 0xFFFFFFFFFFFFFULL * 2 * (m + 1) - a->n[3];
-    r->n[4] = 0x0FFFFFFFFFFFFULL * 2 * (m + 1) - a->n[4];
+    r->n[0] = UINT64_C(0xFFFFEFFFFFC2F) * 2 * (m + 1) - a->n[0];
+    r->n[1] = UINT64_C(0xFFFFFFFFFFFFF) * 2 * (m + 1) - a->n[1];
+    r->n[2] = UINT64_C(0xFFFFFFFFFFFFF) * 2 * (m + 1) - a->n[2];
+    r->n[3] = UINT64_C(0xFFFFFFFFFFFFF) * 2 * (m + 1) - a->n[3];
+    r->n[4] = UINT64_C(0x0FFFFFFFFFFFF) * 2 * (m + 1) - a->n[4];
 #ifdef VERIFY
     r->magnitude = m + 1;
     r->normalized = 0;
@@ -487,10 +487,10 @@ static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe 
 }
 
 static SECP256K1_INLINE void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) {
-    r->n[0] = a->n[0] & 0xFFFFFFFFFFFFFULL;
-    r->n[1] = a->n[0] >> 52 | ((a->n[1] << 12) & 0xFFFFFFFFFFFFFULL);
-    r->n[2] = a->n[1] >> 40 | ((a->n[2] << 24) & 0xFFFFFFFFFFFFFULL);
-    r->n[3] = a->n[2] >> 28 | ((a->n[3] << 36) & 0xFFFFFFFFFFFFFULL);
+    r->n[0] = a->n[0] & UINT64_C(0xFFFFFFFFFFFFF);
+    r->n[1] = a->n[0] >> 52 | ((a->n[1] << 12) & UINT64_C(0xFFFFFFFFFFFFF));
+    r->n[2] = a->n[1] >> 40 | ((a->n[2] << 24) & UINT64_C(0xFFFFFFFFFFFFF));
+    r->n[3] = a->n[2] >> 28 | ((a->n[3] << 36) & UINT64_C(0xFFFFFFFFFFFFF));
     r->n[4] = a->n[3] >> 16;
 #ifdef VERIFY
     r->magnitude = 1;

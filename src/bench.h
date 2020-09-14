@@ -15,11 +15,11 @@
 static int64_t gettime_i64(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return (int64_t)tv.tv_usec + (int64_t)tv.tv_sec * 1000000LL;
+    return (int64_t)tv.tv_usec + (int64_t)tv.tv_sec * INT64_C(1000000);
 }
 
 #define FP_EXP (6)
-#define FP_MULT (1000000LL)
+#define FP_MULT (INT64_C(1000000))
 
 /* Format fixed point number. */
 void print_number(const int64_t x) {
@@ -39,8 +39,8 @@ void print_number(const int64_t x) {
      * sense). */
     y = x_abs;
     c = 0;
-    while (y > 0LL && y < 100LL * FP_MULT && c < FP_EXP) {
-        y *= 10LL;
+    while (y > INT64_C(0) && y < INT64_C(100) * FP_MULT && c < FP_EXP) {
+        y *= INT64_C(10);
         c++;
     }
 

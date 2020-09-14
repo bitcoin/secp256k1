@@ -29,8 +29,8 @@
  *   'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'
  */
 static const secp256k1_fe secp256k1_ecdsa_const_order_as_fe = SECP256K1_FE_CONST(
-    0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFEUL,
-    0xBAAEDCE6UL, 0xAF48A03BUL, 0xBFD25E8CUL, 0xD0364141UL
+    UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFE),
+    UINT32_C(0xBAAEDCE6), UINT32_C(0xAF48A03B), UINT32_C(0xBFD25E8C), UINT32_C(0xD0364141)
 );
 
 /** Difference between field and order, values 'p' and 'n' values defined in
@@ -43,7 +43,7 @@ static const secp256k1_fe secp256k1_ecdsa_const_order_as_fe = SECP256K1_FE_CONST
  *   '14551231950b75fc4402da1722fc9baee'
  */
 static const secp256k1_fe secp256k1_ecdsa_const_p_minus_order = SECP256K1_FE_CONST(
-    0, 0, 0, 1, 0x45512319UL, 0x50B75FC4UL, 0x402DA172UL, 0x2FC9BAEEUL
+    0, 0, 0, 1, UINT32_C(0x45512319), UINT32_C(0x50B75FC4), UINT32_C(0x402DA172), UINT32_C(0x2FC9BAEE)
 );
 
 static int secp256k1_der_read_len(size_t *len, const unsigned char **sigp, const unsigned char *sigend) {

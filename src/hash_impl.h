@@ -35,14 +35,14 @@
 #endif
 
 static void secp256k1_sha256_initialize(secp256k1_sha256 *hash) {
-    hash->s[0] = 0x6a09e667ul;
-    hash->s[1] = 0xbb67ae85ul;
-    hash->s[2] = 0x3c6ef372ul;
-    hash->s[3] = 0xa54ff53aul;
-    hash->s[4] = 0x510e527ful;
-    hash->s[5] = 0x9b05688cul;
-    hash->s[6] = 0x1f83d9abul;
-    hash->s[7] = 0x5be0cd19ul;
+    hash->s[0] = UINT32_C(0x6a09e667);
+    hash->s[1] = UINT32_C(0xbb67ae85);
+    hash->s[2] = UINT32_C(0x3c6ef372);
+    hash->s[3] = UINT32_C(0xa54ff53a);
+    hash->s[4] = UINT32_C(0x510e527f);
+    hash->s[5] = UINT32_C(0x9b05688c);
+    hash->s[6] = UINT32_C(0x1f83d9ab);
+    hash->s[7] = UINT32_C(0x5be0cd19);
     hash->bytes = 0;
 }
 

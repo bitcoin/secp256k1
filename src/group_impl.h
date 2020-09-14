@@ -62,10 +62,10 @@ static const int CURVE_B = 2;
  *  "Standards for Efficient Cryptography" (SEC2) 2.7.1.
  */
 static const secp256k1_ge secp256k1_ge_const_g = SECP256K1_GE_CONST(
-    0x79BE667EUL, 0xF9DCBBACUL, 0x55A06295UL, 0xCE870B07UL,
-    0x029BFCDBUL, 0x2DCE28D9UL, 0x59F2815BUL, 0x16F81798UL,
-    0x483ADA77UL, 0x26A3C465UL, 0x5DA4FBFCUL, 0x0E1108A8UL,
-    0xFD17B448UL, 0xA6855419UL, 0x9C47D08FUL, 0xFB10D4B8UL
+    UINT32_C(0x79BE667E), UINT32_C(0xF9DCBBAC), UINT32_C(0x55A06295), UINT32_C(0xCE870B07),
+    UINT32_C(0x029BFCDB), UINT32_C(0x2DCE28D9), UINT32_C(0x59F2815B), UINT32_C(0x16F81798),
+    UINT32_C(0x483ADA77), UINT32_C(0x26A3C465), UINT32_C(0x5DA4FBFC), UINT32_C(0x0E1108A8),
+    UINT32_C(0xFD17B448), UINT32_C(0xA6855419), UINT32_C(0x9C47D08F), UINT32_C(0xFB10D4B8)
 );
 
 static const int CURVE_B = 7;
@@ -682,8 +682,8 @@ static SECP256K1_INLINE void secp256k1_ge_storage_cmov(secp256k1_ge_storage *r, 
 #ifdef USE_ENDOMORPHISM
 static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a) {
     static const secp256k1_fe beta = SECP256K1_FE_CONST(
-        0x7ae96a2bul, 0x657c0710ul, 0x6e64479eul, 0xac3434e9ul,
-        0x9cf04975ul, 0x12f58995ul, 0xc1396c28ul, 0x719501eeul
+        UINT32_C(0x7ae96a2b), UINT32_C(0x657c0710), UINT32_C(0x6e64479e), UINT32_C(0xac3434e9),
+        UINT32_C(0x9cf04975), UINT32_C(0x12f58995), UINT32_C(0xc1396c28), UINT32_C(0x719501ee)
     );
     *r = *a;
     secp256k1_fe_mul(&r->x, &r->x, &beta);

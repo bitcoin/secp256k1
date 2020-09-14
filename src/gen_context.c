@@ -4,8 +4,8 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
 
-// Autotools creates libsecp256k1-config.h, of which ECMULT_GEN_PREC_BITS is needed.
-// ifndef guard so downstream users can define their own if they do not use autotools.
+/* Autotools creates libsecp256k1-config.h, of which ECMULT_GEN_PREC_BITS is needed.
+   ifndef guard so downstream users can define their own if they do not use autotools. */
 #if !defined(ECMULT_GEN_PREC_BITS)
 #include "libsecp256k1-config.h"
 #endif

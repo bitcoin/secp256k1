@@ -232,8 +232,8 @@ static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *a) {
 #elif defined(USE_FIELD_INV_NUM)
     secp256k1_num n, m;
     static const secp256k1_fe negone = SECP256K1_FE_CONST(
-        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
-        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFEUL, 0xFFFFFC2EUL
+        UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF),
+        UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFF), UINT32_C(0xFFFFFFFE), UINT32_C(0xFFFFFC2E)
     );
     /* secp256k1 field prime, value p defined in "Standards for Efficient Cryptography" (SEC2) 2.7.1. */
     static const unsigned char prime[32] = {
