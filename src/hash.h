@@ -13,10 +13,16 @@
 typedef struct {
     uint32_t s[8];
     uint32_t buf[16]; /* In big endian */
-    size_t bytes;
+    uint64_t bytes;
 } secp256k1_sha256;
 
+
+static const secp256k1_sha256 secp256k1_sha256_initial_state = {
+    {UINT32_C(0x6a09e667), UINT32_C(0xbb67ae85), UINT32_C(0x3c6ef372), UINT32_C(0xa54ff53a), UINT32_C(0x510e527f), UINT32_C(0x9b05688c), UINT32_C(0x1f83d9ab), UINT32_C(0x5be0cd19)},
+    {0x00}, 0};
+
 static void secp256k1_sha256_initialize(secp256k1_sha256 *hash);
+static void secp256k1_sha256_initialize_midstate(secp256k1_sha256 *hash, const secp256k1_sha256 *state);
 static void secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *data, size_t size);
 static void secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32);
 
