@@ -103,6 +103,12 @@ static void secp256k1_scalar_order_get_num(secp256k1_num *r);
 static int secp256k1_scalar_eq(const secp256k1_scalar *a, const secp256k1_scalar *b);
 
 #ifdef USE_ENDOMORPHISM
+#ifndef EXHAUSTIVE_TEST_ORDER
+static const secp256k1_scalar minus_lambda = SECP256K1_SCALAR_CONST(
+    0xAC9C52B3UL, 0x3FA3CF1FUL, 0x5AD9E3FDUL, 0x77ED9BA4UL,
+    0xA880B9FCUL, 0x8EC739C2UL, 0xE0CFC810UL, 0xB51283CFUL
+);
+#endif
 /** Find r1 and r2 such that r1+r2*2^128 = a. */
 static void secp256k1_scalar_split_128(secp256k1_scalar *r1, secp256k1_scalar *r2, const secp256k1_scalar *a);
 /** Find r1 and r2 such that r1+r2*lambda = a, and r1 and r2 are maximum 128 bits long (see secp256k1_gej_mul_lambda). */

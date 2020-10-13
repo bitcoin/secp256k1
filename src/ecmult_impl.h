@@ -637,7 +637,7 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
     state.pre_a_lam = pre_a_lam;
 #endif
     state.ps = ps;
-    secp256k1_ecmult_strauss_wnaf(ctx, &state, r, 1, a, na, ng);
+    secp256k1_ecmult_strauss_wnaf(ctx, &state, r, a != NULL && na != NULL, a, na, ng);
 }
 
 static size_t secp256k1_strauss_scratch_size(size_t n_points) {

@@ -757,6 +757,36 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_pubkey_combine(
     size_t n
 ) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
+/** Quickly produce a large number of related public/private keypairs.
+ *  Returns: 1 unless the seed is invalid.
+ *  Args:    ctx:       pointer to a context object (initialized for verification)
+ *  Out:     pubs:      pointer to an array that will receive a list of public keys
+ *           privs:     pointer to an array of 32*n bytes which will receive a list of private keys/tweaks
+ *  In:      n          the number of keypairs to generate.
+ *           seed32     a seed to start the generation with (must be a valid secret key)
+ *           master     optional, a public key to use as base instead of the generator.
+ *
+ *  This function can be used when you want to search through a large space of potential
+ *  keypairs to find one with particular properties. Never use more than one of the resulting
+ *  keys.
+ *
+ *  To directly generate private/public keypairs, set master to NULL, and repeatedly call this
+ *  function for thousands of keys at once, passing in random values as seed.
+ *
+ *  To privately generate private/public keypairs, set master to a public key you know the private key
+ *  for instead. In this case, the 'privs' output array will receive multipliers instead of actual
+ *  private keys. They need to be applied to your private key using secp256k1_ec_privkey_tweak_mul
+ *  to obtain the actual private key corresponding to the produced public keys.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_grind(
+    const secp256k1_context* ctx,
+    secp256k1_pubkey* pubs,
+    unsigned char* privs,
+    size_t n,
+    const unsigned char* seed32,
+    const secp256k1_pubkey* master
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5);
+
 #ifdef __cplusplus
 }
 #endif

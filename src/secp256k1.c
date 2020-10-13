@@ -757,6 +757,79 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
     return 1;
 }
 
+int secp256k1_ec_grind(const secp256k1_context* ctx, secp256k1_pubkey* pubs, unsigned char* privs, size_t n, const unsigned char* seed32, const secp256k1_pubkey* master) {
+#if defined(USE_ENDOMORPHISM) && !defined(EXHAUSTIVE_TEST_ORDER)
+    const unsigned int batch_size = 6;
+    secp256k1_scalar lambda;
+    secp256k1_scalar vals[3];
+#else
+    const unsigned int batch_size = 2;
+    secp256k1_scalar vals[1];
+#endif
+    const size_t batches = (n + batch_size - 1) / batch_size;
+    secp256k1_ge* pointg;
+    secp256k1_gej* points;
+    int overflow = 0;
+    size_t i = 1, p = 0;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(pubs != NULL);
+    ARG_CHECK(privs != NULL);
+    ARG_CHECK(seed32 != NULL);
+    ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
+
+    secp256k1_scalar_set_b32(&vals[0], seed32, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&vals[0])) return 0;
+
+#if defined(USE_ENDOMORPHISM) && !defined(EXHAUSTIVE_TEST_ORDER)
+    secp256k1_scalar_negate(&lambda, &minus_lambda);
+    secp256k1_scalar_mul(&vals[1], &vals[0], &lambda);
+    secp256k1_scalar_mul(&vals[2], &vals[1], &lambda);
+#endif
+
+    pointg = (secp256k1_ge*)checked_malloc(&ctx->error_callback, batches * sizeof(secp256k1_ge));
+    points = (secp256k1_gej*)checked_malloc(&ctx->error_callback, batches * sizeof(secp256k1_gej));
+    if (master) {
+        secp256k1_pubkey_load(ctx, pointg, master);
+        secp256k1_gej_set_ge(points, pointg);
+        secp256k1_ecmult(&ctx->ecmult_ctx, points, points, &vals[0], NULL);
+    } else {
+        secp256k1_ecmult(&ctx->ecmult_ctx, points, NULL, NULL, &vals[0]);
+    }
+    while (i < batches) {
+        secp256k1_gej_double_var(&points[i], &points[i - 1], NULL);
+        ++i;
+    }
+    secp256k1_ge_set_all_gej_var(pointg, points, batches, &ctx->error_callback);
+    free(points);
+
+    while (p < batches) {
+        secp256k1_ge tmpg = pointg[p];
+        for (i = 0; i < batch_size; ++i) {
+            size_t j = p * batch_size + i;
+            if (j == n) break;
+            if (i & 1) {
+                secp256k1_scalar neg;
+                secp256k1_ge negg;
+                secp256k1_scalar_negate(&neg, &vals[i / 2]);
+                secp256k1_scalar_get_b32(privs + 32 * j, &neg);
+                secp256k1_ge_neg(&negg, &tmpg);
+                secp256k1_pubkey_save(&pubs[j], &negg);
+            } else {
+                if (p) secp256k1_scalar_add(&vals[i / 2], &vals[i / 2], &vals[i / 2]);
+#if defined(USE_ENDOMORPHISM) && !defined(EXHAUSTIVE_TEST_ORDER)
+                if (i) secp256k1_ge_mul_lambda(&tmpg, &tmpg);
+#endif
+                secp256k1_scalar_get_b32(privs + 32 * j, &vals[i / 2]);
+                secp256k1_pubkey_save(&pubs[j], &tmpg);
+            }
+        }
+        ++p;
+    }
+    free(pointg);
+    return 1;
+}
+
 #ifdef ENABLE_MODULE_ECDH
 # include "modules/ecdh/main_impl.h"
 #endif

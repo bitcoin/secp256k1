@@ -314,10 +314,6 @@ static void secp256k1_scalar_split_lambda(secp256k1_scalar *r1, secp256k1_scalar
 
 static void secp256k1_scalar_split_lambda(secp256k1_scalar *r1, secp256k1_scalar *r2, const secp256k1_scalar *a) {
     secp256k1_scalar c1, c2;
-    static const secp256k1_scalar minus_lambda = SECP256K1_SCALAR_CONST(
-        0xAC9C52B3UL, 0x3FA3CF1FUL, 0x5AD9E3FDUL, 0x77ED9BA4UL,
-        0xA880B9FCUL, 0x8EC739C2UL, 0xE0CFC810UL, 0xB51283CFUL
-    );
     static const secp256k1_scalar minus_b1 = SECP256K1_SCALAR_CONST(
         0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
         0xE4437ED6UL, 0x010E8828UL, 0x6F547FA9UL, 0x0ABFE4C3UL
