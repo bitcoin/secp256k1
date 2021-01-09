@@ -492,6 +492,9 @@ AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG], [test x"$enable_module_schnorrsig" = 
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm"])
 
+AM_COND_IF([ENABLE_MODULE_ECDH],     [AC_CONFIG_FILES([libsecp256k1-ecdh.pc])])
+AM_COND_IF([ENABLE_MODULE_RECOVERY], [AC_CONFIG_FILES([libsecp256k1-recovery.pc])])
+
 dnl make sure nothing new is exported so that we don't break the cache
 PKGCONFIG_PATH_TEMP="$PKG_CONFIG_PATH"
 unset PKG_CONFIG_PATH
