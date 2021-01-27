@@ -9,9 +9,11 @@ osx_image: xcode10.1
 addons:
   apt:
     packages:
+      - clang-tools-10
       - libgmp-dev
       - valgrind
       - libtool-bin
+      - bear
 compiler:
   - clang
   - gcc
@@ -44,10 +46,12 @@ matrix:
       addons:
         apt:
           packages:
+            - clang-tools-10
             - gcc-multilib
             - libgmp-dev:i386
             - valgrind
             - libtool-bin
+            - bear
             - libc6-dbg:i386
     - compiler: clang
       env: HOST=i686-linux-gnu
@@ -55,9 +59,11 @@ matrix:
       addons:
         apt:
           packages:
+            - clang-tools-10
             - gcc-multilib
             - valgrind
             - libtool-bin
+            - bear
             - libc6-dbg:i386
     - compiler: gcc
       env: HOST=i686-linux-gnu
@@ -65,6 +71,7 @@ matrix:
       addons:
         apt:
           packages:
+            - clang-tools-10
             - gcc-multilib
             - valgrind
             - libtool-bin
@@ -75,6 +82,7 @@ matrix:
       addons:
         apt:
           packages:
+            - clang-tools-10
             - gcc-multilib
             - libgmp-dev:i386
             - valgrind
@@ -105,5 +113,7 @@ after_script:
     - cat ./exhaustive_tests.log
     - cat ./valgrind_ctime_test.log
     - cat ./bench.log
+    - cat ./clang-query.log
+    - cat ./compile_commands.json
     - $CC --version
     - valgrind --version

@@ -23,6 +23,13 @@ fi
 
 if [ -n "$BUILD" ]
 then
+    if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_COMPILER" = "clang" ]
+    then
+        # Use bear to generate compile_commands.json
+        # This needs to be the first make command because otherwise make does not invoke the compiler because the files are up to date.
+        # We need to update this to "bear -- make" when we move to bear 3.0.
+        bear make -j2
+    fi
     make -j2 "$BUILD"
 fi
 if [ "$RUN_VALGRIND" = "yes" ]
@@ -65,4 +72,13 @@ fi
 if [ "$CTIMETEST" = "yes" ]
 then
     ./libtool --mode=execute valgrind --error-exitcode=42 ./valgrind_ctime_test > valgrind_ctime_test.log 2>&1
+fi
+
+# This would also run on gcc builds but there's no need to run it for both compilers.
+if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_COMPILER" = "clang" ]
+then
+    # Abuse `script` to run make clang-query believe it's running with a terminal (see https://superuser.com/a/1434381/404598).
+    # This lets us write color codes to clang-query.log.
+    # (Passing `--extra-arg=-fcolor-diagnostics` to clang-query works only if stdout but not stderr is redirected to a file...)
+    CLANG_QUERY=clang-query-10 script -efqc "./clang-query.sh 2>&1" clang-query.log > /dev/null
 fi

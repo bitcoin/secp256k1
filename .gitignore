@@ -33,6 +33,8 @@ libtool
 *~
 *.log
 *.trs
+compile_commands.commands.json
+compile_commands.json
 src/libsecp256k1-config.h
 src/libsecp256k1-config.h.in
 src/ecmult_static_context.h
