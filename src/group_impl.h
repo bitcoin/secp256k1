@@ -155,27 +155,26 @@ static void secp256k1_ge_set_all_gej_var(secp256k1_ge *r, const secp256k1_gej *a
     }
 }
 
-static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp256k1_fe *globalz, const secp256k1_gej *a, const secp256k1_fe *zr) {
+static void secp256k1_ge_globalz_fixup_table(size_t len, secp256k1_ge *a, const secp256k1_fe *zr) {
     size_t i = len - 1;
     secp256k1_fe zs;
 
     if (len > 0) {
-        /* The z of the final point gives us the "global Z" for the table. */
-        r[i].x = a[i].x;
-        r[i].y = a[i].y;
         /* Ensure all y values are in weak normal form for fast negation of points */
-        secp256k1_fe_normalize_weak(&r[i].y);
-        *globalz = a[i].z;
-        r[i].infinity = 0;
+        secp256k1_fe_normalize_weak(&a[i].y);
         zs = zr[i];
 
         /* Work our way backwards, using the z-ratios to scale the x/y values. */
         while (i > 0) {
+            secp256k1_gej tmpa;
             if (i != len - 1) {
                 secp256k1_fe_mul(&zs, &zs, &zr[i]);
             }
             i--;
-            secp256k1_ge_set_gej_zinv(&r[i], &a[i], &zs);
+            tmpa.x = a[i].x;
+            tmpa.y = a[i].y;
+            tmpa.infinity = 0;
+            secp256k1_ge_set_gej_zinv(&a[i], &tmpa, &zs);
         }
     }
 }

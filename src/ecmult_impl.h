@@ -77,12 +77,14 @@
 
 #define ECMULT_MAX_POINTS_PER_BATCH 5000000
 
-/** Fill a table 'prej' with precomputed odd multiples of a. Prej will contain
+/** Fill a table 'pre_a' with precomputed odd multiples of a. Pre_a will contain
  *  the values [1*a,3*a,...,(2*n-1)*a], so it space for n values. zr[0] will
- *  contain prej[0].z / a.z. The other zr[i] values = prej[i].z / prej[i-1].z.
- *  Prej's Z values are undefined, except for the last value.
+ *  contain pre_a[0].z / a.z. The other zr[i] values = pre_a[i].z / pre_a[i-1].z.
+ *  The a value will end up equal to pre_a[(2*n-1)].
+ *  The output pre_a array will have their z-coordinate omitted.
+ *  The omitted z-coordinate are implied by the final a value's z-coordinate and the zr array.
  */
-static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, secp256k1_fe *zr, const secp256k1_gej *a) {
+static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_ge *pre_a, secp256k1_fe *zr, secp256k1_gej *a) {
     secp256k1_gej d;
     secp256k1_ge a_ge, d_ge;
     int i;
@@ -100,21 +102,19 @@ static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, sec
     d_ge.infinity = 0;
 
     secp256k1_ge_set_gej_zinv(&a_ge, a, &d.z);
-    prej[0].x = a_ge.x;
-    prej[0].y = a_ge.y;
-    prej[0].z = a->z;
-    prej[0].infinity = 0;
+    pre_a[0].x = a->x = a_ge.x;
+    pre_a[0].y = a->y = a_ge.y;
+    pre_a[0].infinity = 0;
 
     zr[0] = d.z;
     for (i = 1; i < n; i++) {
-        secp256k1_gej_add_ge_var(&prej[i], &prej[i-1], &d_ge, &zr[i]);
+        secp256k1_gej_add_ge_var(a, a, &d_ge, &zr[i]);
+        pre_a[i].x = a->x;
+        pre_a[i].y = a->y;
+        pre_a[i].infinity = 0;
     }
 
-    /*
-     * Each point in 'prej' has a z coordinate too small by a factor of 'd.z'. Only
-     * the final point's z coordinate is actually used though, so just update that.
-     */
-    secp256k1_fe_mul(&prej[n-1].z, &prej[n-1].z, &d.z);
+    secp256k1_fe_mul(&a->z, &a->z, &d.z);
 }
 
 /** Fill a table 'pre' with precomputed odd multiples of a.
@@ -133,13 +133,14 @@ static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, sec
  *  happen once).
  */
 static void secp256k1_ecmult_odd_multiples_table_globalz_windowa(secp256k1_ge *pre, secp256k1_fe *globalz, const secp256k1_gej *a) {
-    secp256k1_gej prej[ECMULT_TABLE_SIZE(WINDOW_A)];
+    secp256k1_gej tmp = *a;
     secp256k1_fe zr[ECMULT_TABLE_SIZE(WINDOW_A)];
 
     /* Compute the odd multiples in Jacobian form. */
-    secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), prej, zr, a);
+    secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), pre, zr, &tmp);
     /* Bring them to the same Z denominator. */
-    secp256k1_ge_globalz_set_table_gej(ECMULT_TABLE_SIZE(WINDOW_A), pre, globalz, prej, zr);
+    *globalz = tmp.z;
+    secp256k1_ge_globalz_fixup_table(ECMULT_TABLE_SIZE(WINDOW_A), pre, zr);
 }
 
 static void secp256k1_ecmult_odd_multiples_table_storage_var(const int n, secp256k1_ge_storage *pre, const secp256k1_gej *a) {
@@ -491,18 +492,21 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
      */
     if (no > 0) {
         /* Compute the odd multiples in Jacobian form. */
-        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->prej, state->zr, &a[state->ps[0].input_pos]);
+        secp256k1_gej tmp = a[state->ps[0].input_pos];
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a, state->zr, &tmp);
         for (np = 1; np < no; ++np) {
-            secp256k1_gej tmp = a[state->ps[np].input_pos];
+            Z = tmp.z;
+            tmp = a[state->ps[np].input_pos];
 #ifdef VERIFY
-            secp256k1_fe_normalize_var(&(state->prej[(np - 1) * ECMULT_TABLE_SIZE(WINDOW_A) + ECMULT_TABLE_SIZE(WINDOW_A) - 1].z));
+            secp256k1_fe_normalize_var(&Z);
 #endif
-            secp256k1_gej_rescale(&tmp, &(state->prej[(np - 1) * ECMULT_TABLE_SIZE(WINDOW_A) + ECMULT_TABLE_SIZE(WINDOW_A) - 1].z));
-            secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->prej + np * ECMULT_TABLE_SIZE(WINDOW_A), state->zr + np * ECMULT_TABLE_SIZE(WINDOW_A), &tmp);
+            secp256k1_gej_rescale(&tmp, &Z);
+            secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + np * ECMULT_TABLE_SIZE(WINDOW_A), state->zr + np * ECMULT_TABLE_SIZE(WINDOW_A), &tmp);
             secp256k1_fe_mul(state->zr + np * ECMULT_TABLE_SIZE(WINDOW_A), state->zr + np * ECMULT_TABLE_SIZE(WINDOW_A), &(a[state->ps[np].input_pos].z));
         }
         /* Bring them to the same Z denominator. */
-        secp256k1_ge_globalz_set_table_gej(ECMULT_TABLE_SIZE(WINDOW_A) * no, state->pre_a, &Z, state->prej, state->zr);
+        Z = tmp.z;
+        secp256k1_ge_globalz_fixup_table(ECMULT_TABLE_SIZE(WINDOW_A) * no, state->pre_a, state->zr);
     } else {
         secp256k1_fe_set_int(&Z, 1);
     }
