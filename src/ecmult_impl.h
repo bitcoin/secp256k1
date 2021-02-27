@@ -68,7 +68,7 @@
 
 /* The number of objects allocated on the scratch space for ecmult_multi algorithms */
 #define PIPPENGER_SCRATCH_OBJECTS 6
-#define STRAUSS_SCRATCH_OBJECTS 6
+#define STRAUSS_SCRATCH_OBJECTS 5
 
 #define PIPPENGER_MAX_BUCKET_WINDOW 12
 
@@ -454,7 +454,6 @@ struct secp256k1_strauss_state {
     /* aux is used to hold z-ratios, and then used to hold pre_a[i].x * BETA values. */
     secp256k1_fe* aux;
     secp256k1_ge* pre_a;
-    secp256k1_ge* pre_a_lam;
     struct secp256k1_strauss_point_state* ps;
 };
 
@@ -582,18 +581,16 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
     secp256k1_fe aux[ECMULT_TABLE_SIZE(WINDOW_A)];
     secp256k1_ge pre_a[ECMULT_TABLE_SIZE(WINDOW_A)];
     struct secp256k1_strauss_point_state ps[1];
-    secp256k1_ge pre_a_lam[ECMULT_TABLE_SIZE(WINDOW_A)];
     struct secp256k1_strauss_state state;
 
     state.aux = aux;
     state.pre_a = pre_a;
-    state.pre_a_lam = pre_a_lam;
     state.ps = ps;
     secp256k1_ecmult_strauss_wnaf(ctx, &state, r, 1, a, na, ng);
 }
 
 static size_t secp256k1_strauss_scratch_size(size_t n_points) {
-    static const size_t point_size = (2 * sizeof(secp256k1_ge) + sizeof(secp256k1_fe)) * ECMULT_TABLE_SIZE(WINDOW_A) + sizeof(struct secp256k1_strauss_point_state) + sizeof(secp256k1_gej) + sizeof(secp256k1_scalar);
+    static const size_t point_size = (sizeof(secp256k1_ge) + sizeof(secp256k1_fe)) * ECMULT_TABLE_SIZE(WINDOW_A) + sizeof(struct secp256k1_strauss_point_state) + sizeof(secp256k1_gej) + sizeof(secp256k1_scalar);
     return n_points*point_size;
 }
 
@@ -613,10 +610,9 @@ static int secp256k1_ecmult_strauss_batch(const secp256k1_callback* error_callba
     scalars = (secp256k1_scalar*)secp256k1_scratch_alloc(error_callback, scratch, n_points * sizeof(secp256k1_scalar));
     state.aux = (secp256k1_fe*)secp256k1_scratch_alloc(error_callback, scratch, n_points * ECMULT_TABLE_SIZE(WINDOW_A) * sizeof(secp256k1_fe));
     state.pre_a = (secp256k1_ge*)secp256k1_scratch_alloc(error_callback, scratch, n_points * ECMULT_TABLE_SIZE(WINDOW_A) * sizeof(secp256k1_ge));
-    state.pre_a_lam = (secp256k1_ge*)secp256k1_scratch_alloc(error_callback, scratch, n_points * ECMULT_TABLE_SIZE(WINDOW_A) * sizeof(secp256k1_ge));
     state.ps = (struct secp256k1_strauss_point_state*)secp256k1_scratch_alloc(error_callback, scratch, n_points * sizeof(struct secp256k1_strauss_point_state));
 
-    if (points == NULL || scalars == NULL || state.aux == NULL || state.pre_a == NULL || state.pre_a_lam == NULL || state.ps == NULL) {
+    if (points == NULL || scalars == NULL || state.aux == NULL || state.pre_a == NULL || state.ps == NULL) {
         secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
         return 0;
     }
