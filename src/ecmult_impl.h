@@ -455,7 +455,9 @@ struct secp256k1_strauss_state {
     struct secp256k1_strauss_point_state* ps;
 };
 
-static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, const struct secp256k1_strauss_state *state, secp256k1_gej *r, size_t num, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
+typedef int (secp256k1_ecmult_strauss_multi_callback)(secp256k1_scalar *sc, secp256k1_gej *pt, size_t idx, void *data);
+
+static int secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, const struct secp256k1_strauss_state *state, secp256k1_gej *r, size_t num, secp256k1_ecmult_strauss_multi_callback cb, void *cbdata, size_t cb_offset, const secp256k1_scalar *ng) {
     secp256k1_ge tmpa;
     secp256k1_fe Z;
     /* Splitted G factors. */
@@ -471,13 +473,17 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
 
     secp256k1_fe_set_int(&Z, 1);
     for (np = 0; np < num; ++np) {
-        secp256k1_gej tmp;
-        secp256k1_scalar na_1, na_lam;
-        if (secp256k1_scalar_is_zero(&na[np]) || secp256k1_gej_is_infinity(&a[np])) {
+        secp256k1_gej a;
+        secp256k1_fe az;
+        secp256k1_scalar na, na_1, na_lam;
+
+        if (!cb(&na, &a, np + cb_offset, cbdata)) return 0;
+        if (secp256k1_scalar_is_zero(&na) || secp256k1_gej_is_infinity(&a)) {
             continue;
         }
+
         /* split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit) */
-        secp256k1_scalar_split_lambda(&na_1, &na_lam, &na[np]);
+        secp256k1_scalar_split_lambda(&na_1, &na_lam, &na);
 
         /* build wnaf representation for na_1 and na_lam. */
         state->ps[no].bits_na_1   = secp256k1_ecmult_wnaf(state->ps[no].wnaf_na_1,   129, &na_1,   WINDOW_A);
@@ -501,16 +507,16 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
          * of 1/Z, so we can use secp256k1_gej_add_zinv_var, which uses the same
          * isomorphism to efficiently add with a known Z inverse.
          */
-        tmp = a[np];
+        az = a.z;
         if (no) {
 #ifdef VERIFY
             secp256k1_fe_normalize_var(&Z);
 #endif
-            secp256k1_gej_rescale(&tmp, &Z);
+            secp256k1_gej_rescale(&a, &Z);
         }
-        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &tmp);
-        if (no) secp256k1_fe_mul(state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &(a[np].z));
-        Z = tmp.z;
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &a);
+        if (no) secp256k1_fe_mul(state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &az);
+        Z = a.z;
 
         ++no;
     }
@@ -569,6 +575,24 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
     if (!r->infinity) {
         secp256k1_fe_mul(&r->z, &r->z, &Z);
     }
+
+    return 1;
+}
+
+struct secp256k1_ecmult_array_cb_data {
+    const secp256k1_scalar *na;
+    const secp256k1_gej *a;
+};
+
+static int secp256k1_ecmult_array_cb(secp256k1_scalar *sc, secp256k1_gej *pt, size_t idx, void *data) {
+    struct secp256k1_ecmult_array_cb_data *array_data = data;
+    *sc = array_data->na[idx];
+    if (array_data->a) {
+        *pt = array_data->a[idx];
+        return 1;
+    } else {
+        return secp256k1_scalar_is_zero(sc);
+    }
 }
 
 static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
@@ -576,11 +600,14 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
     secp256k1_ge pre_a[ECMULT_TABLE_SIZE(WINDOW_A)];
     struct secp256k1_strauss_point_state ps[1];
     struct secp256k1_strauss_state state;
+    struct secp256k1_ecmult_array_cb_data data;
 
     state.aux = aux;
     state.pre_a = pre_a;
     state.ps = ps;
-    secp256k1_ecmult_strauss_wnaf(ctx, &state, r, 1, a, na, ng);
+    data.na = na;
+    data.a = a;
+    secp256k1_ecmult_strauss_wnaf(ctx, &state, r, 1, &secp256k1_ecmult_array_cb, &data, 0, ng);
 }
 
 static size_t secp256k1_strauss_scratch_size(size_t n_points) {
@@ -588,11 +615,28 @@ static size_t secp256k1_strauss_scratch_size(size_t n_points) {
     return n_points*point_size;
 }
 
+struct secp256k1_ecmult_adaptor_cb_data {
+    secp256k1_ecmult_multi_callback *cb;
+    void *data;
+};
+
+static int secp256k1_ecmult_adaptor_cb(secp256k1_scalar *sc, secp256k1_gej *pt, size_t idx, void *data) {
+    secp256k1_ge tmp;
+    struct secp256k1_ecmult_adaptor_cb_data *adaptor_data = data;
+    int result = adaptor_data->cb(sc, &tmp, idx, adaptor_data->data);
+
+    if (result) {
+        secp256k1_gej_set_ge(pt, &tmp);
+    }
+
+    return result;
+}
+
 static int secp256k1_ecmult_strauss_batch(const secp256k1_callback* error_callback, const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n_points, size_t cb_offset) {
     secp256k1_gej* points;
     secp256k1_scalar* scalars;
+    struct secp256k1_ecmult_adaptor_cb_data adaptor_data;
     struct secp256k1_strauss_state state;
-    size_t i;
     const size_t scratch_checkpoint = secp256k1_scratch_checkpoint(error_callback, scratch);
 
     secp256k1_gej_set_infinity(r);
@@ -602,6 +646,8 @@ static int secp256k1_ecmult_strauss_batch(const secp256k1_callback* error_callba
 
     points = (secp256k1_gej*)secp256k1_scratch_alloc(error_callback, scratch, n_points * sizeof(secp256k1_gej));
     scalars = (secp256k1_scalar*)secp256k1_scratch_alloc(error_callback, scratch, n_points * sizeof(secp256k1_scalar));
+    adaptor_data.cb = cb;
+    adaptor_data.data = cbdata;
     state.aux = (secp256k1_fe*)secp256k1_scratch_alloc(error_callback, scratch, n_points * ECMULT_TABLE_SIZE(WINDOW_A) * sizeof(secp256k1_fe));
     state.pre_a = (secp256k1_ge*)secp256k1_scratch_alloc(error_callback, scratch, n_points * ECMULT_TABLE_SIZE(WINDOW_A) * sizeof(secp256k1_ge));
     state.ps = (struct secp256k1_strauss_point_state*)secp256k1_scratch_alloc(error_callback, scratch, n_points * sizeof(struct secp256k1_strauss_point_state));
@@ -611,15 +657,10 @@ static int secp256k1_ecmult_strauss_batch(const secp256k1_callback* error_callba
         return 0;
     }
 
-    for (i = 0; i < n_points; i++) {
-        secp256k1_ge point;
-        if (!cb(&scalars[i], &point, i+cb_offset, cbdata)) {
-            secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
-            return 0;
-        }
-        secp256k1_gej_set_ge(&points[i], &point);
+    if (!secp256k1_ecmult_strauss_wnaf(ctx, &state, r, n_points, &secp256k1_ecmult_adaptor_cb, &adaptor_data, cb_offset, inp_g_sc)) {
+        secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
+        return 0;
     }
-    secp256k1_ecmult_strauss_wnaf(ctx, &state, r, n_points, points, scalars, inp_g_sc);
     secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
     return 1;
 }
