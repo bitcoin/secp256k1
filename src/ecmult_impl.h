@@ -446,7 +446,6 @@ struct secp256k1_strauss_point_state {
     int wnaf_na_lam[129];
     int bits_na_1;
     int bits_na_lam;
-    size_t input_pos;
 };
 
 struct secp256k1_strauss_state {
@@ -470,12 +469,13 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
     size_t np;
     size_t no = 0;
 
+    secp256k1_fe_set_int(&Z, 1);
     for (np = 0; np < num; ++np) {
+        secp256k1_gej tmp;
         secp256k1_scalar na_1, na_lam;
         if (secp256k1_scalar_is_zero(&na[np]) || secp256k1_gej_is_infinity(&a[np])) {
             continue;
         }
-        state->ps[no].input_pos = np;
         /* split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit) */
         secp256k1_scalar_split_lambda(&na_1, &na_lam, &na[np]);
 
@@ -490,39 +490,33 @@ static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, c
         if (state->ps[no].bits_na_lam > bits) {
             bits = state->ps[no].bits_na_lam;
         }
-        ++no;
-    }
 
-    /* Calculate odd multiples of a.
-     * All multiples are brought to the same Z 'denominator', which is stored
-     * in Z. Due to secp256k1' isomorphism we can do all operations pretending
-     * that the Z coordinate was 1, use affine addition formulae, and correct
-     * the Z coordinate of the result once at the end.
-     * The exception is the precomputed G table points, which are actually
-     * affine. Compared to the base used for other points, they have a Z ratio
-     * of 1/Z, so we can use secp256k1_gej_add_zinv_var, which uses the same
-     * isomorphism to efficiently add with a known Z inverse.
-     */
-    if (no > 0) {
-        /* Compute the odd multiples in Jacobian form. */
-        secp256k1_gej tmp = a[state->ps[0].input_pos];
-        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a, state->aux, &tmp);
-        for (np = 1; np < no; ++np) {
-            Z = tmp.z;
-            tmp = a[state->ps[np].input_pos];
+        /* Calculate odd multiples of a.
+         * All multiples are brought to the same Z 'denominator', which is stored
+         * in Z. Due to secp256k1' isomorphism we can do all operations pretending
+         * that the Z coordinate was 1, use affine addition formulae, and correct
+         * the Z coordinate of the result once at the end.
+         * The exception is the precomputed G table points, which are actually
+         * affine. Compared to the base used for other points, they have a Z ratio
+         * of 1/Z, so we can use secp256k1_gej_add_zinv_var, which uses the same
+         * isomorphism to efficiently add with a known Z inverse.
+         */
+        tmp = a[np];
+        if (no) {
 #ifdef VERIFY
             secp256k1_fe_normalize_var(&Z);
 #endif
             secp256k1_gej_rescale(&tmp, &Z);
-            secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + np * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + np * ECMULT_TABLE_SIZE(WINDOW_A), &tmp);
-            secp256k1_fe_mul(state->aux + np * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + np * ECMULT_TABLE_SIZE(WINDOW_A), &(a[state->ps[np].input_pos].z));
         }
-        /* Bring them to the same Z denominator. */
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &tmp);
+        if (no) secp256k1_fe_mul(state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &(a[np].z));
         Z = tmp.z;
-        secp256k1_ge_globalz_fixup_table(ECMULT_TABLE_SIZE(WINDOW_A) * no, state->pre_a, state->aux);
-    } else {
-        secp256k1_fe_set_int(&Z, 1);
+
+        ++no;
     }
+
+    /* Bring them to the same Z denominator. */
+    secp256k1_ge_globalz_fixup_table(ECMULT_TABLE_SIZE(WINDOW_A) * no, state->pre_a, state->aux);
 
     for (np = 0; np < no; ++np) {
         for (i = 0; i < ECMULT_TABLE_SIZE(WINDOW_A); i++) {
