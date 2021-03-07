@@ -10,8 +10,8 @@
 #include "util.h"
 #include "field.h"
 
-#ifdef VERIFY
 static void secp256k1_fe_verify(const secp256k1_fe *a) {
+#ifdef VERIFY
     const uint32_t *d = a->n;
     int m = a->normalized ? 1 : 2 * a->magnitude, r = 1;
     r &= (d[0] <= 0x3FFFFFFUL * m);
@@ -36,8 +36,9 @@ static void secp256k1_fe_verify(const secp256k1_fe *a) {
         }
     }
     VERIFY_CHECK(r == 1);
-}
 #endif
+    (void)a;
+}
 
 static void secp256k1_fe_normalize(secp256k1_fe *r) {
     uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],

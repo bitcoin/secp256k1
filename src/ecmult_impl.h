@@ -81,6 +81,7 @@
  *  the values [1*a,3*a,...,(2*n-1)*a], so it space for n values. zr[0] will
  *  contain prej[0].z / a.z. The other zr[i] values = prej[i].z / prej[i-1].z.
  *  Prej's Z values are undefined, except for the last value.
+ *  'a' cannot be infinity.
  */
 static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, secp256k1_fe *zr, const secp256k1_gej *a) {
     secp256k1_gej d;
@@ -97,13 +98,13 @@ static void secp256k1_ecmult_odd_multiples_table(int n, secp256k1_gej *prej, sec
      */
     d_ge.x = d.x;
     d_ge.y = d.y;
-    d_ge.infinity = 0;
+    d_ge.infinity = d.infinity;
 
     secp256k1_ge_set_gej_zinv(&a_ge, a, &d.z);
     prej[0].x = a_ge.x;
     prej[0].y = a_ge.y;
     prej[0].z = a->z;
-    prej[0].infinity = 0;
+    prej[0].infinity = a->infinity;
 
     zr[0] = d.z;
     for (i = 1; i < n; i++) {
@@ -164,13 +165,13 @@ static void secp256k1_ecmult_odd_multiples_table_storage_var(const int n, secp25
      */
     d_ge.x = d.x;
     d_ge.y = d.y;
-    d_ge.infinity = 0;
+    d_ge.infinity = d.infinity;
 
     secp256k1_ge_set_gej_zinv(&p_ge, a, &d.z);
     pj.x = p_ge.x;
     pj.y = p_ge.y;
     pj.z = a->z;
-    pj.infinity = 0;
+    pj.infinity = p_ge.infinity;
 
     for (i = 0; i < (n - 1); i++) {
         secp256k1_fe_normalize_var(&pj.y);

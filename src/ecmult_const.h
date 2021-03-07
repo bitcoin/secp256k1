@@ -11,7 +11,7 @@
 #include "group.h"
 
 /**
- * Multiply: R = q*A (in constant-time)
+ * Multiply: R = q*A (in constant-time for q)
  * Here `bits` should be set to the maximum bitlength of the _absolute value_ of `q`, plus
  * one because we internally sometimes add 2 to the number during the WNAF conversion.
  */

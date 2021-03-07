@@ -60,34 +60,63 @@ static const secp256k1_ge secp256k1_ge_const_g = SECP256K1_GE_CONST(
 static const secp256k1_fe secp256k1_fe_const_b = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 7);
 #endif
 
+static void secp256k1_ge_verify(const secp256k1_ge *a) {
+#ifdef VERIFY
+    secp256k1_fe_verify(&a->x);
+    secp256k1_fe_verify(&a->y);
+    VERIFY_CHECK(a->infinity == 0 || a->infinity == 1);
+#endif
+    (void)a;
+}
+
+static void secp256k1_gej_verify(const secp256k1_gej *a) {
+#ifdef VERIFY
+    secp256k1_fe_verify(&a->x);
+    secp256k1_fe_verify(&a->y);
+    secp256k1_fe_verify(&a->z);
+    VERIFY_CHECK(a->infinity == 0 || a->infinity == 1);
+#endif
+    (void)a;
+}
+
 static void secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zi) {
     secp256k1_fe zi2;
     secp256k1_fe zi3;
+    secp256k1_gej_verify(a);
+    secp256k1_fe_verify(zi);
     secp256k1_fe_sqr(&zi2, zi);
     secp256k1_fe_mul(&zi3, &zi2, zi);
     secp256k1_fe_mul(&r->x, &a->x, &zi2);
     secp256k1_fe_mul(&r->y, &a->y, &zi3);
     r->infinity = a->infinity;
+    secp256k1_ge_verify(r);
 }
 
 static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y) {
+    secp256k1_fe_verify(x);
+    secp256k1_fe_verify(y);
     r->infinity = 0;
     r->x = *x;
     r->y = *y;
+    secp256k1_ge_verify(r);
 }
 
 static int secp256k1_ge_is_infinity(const secp256k1_ge *a) {
+    secp256k1_ge_verify(a);
     return a->infinity;
 }
 
 static void secp256k1_ge_neg(secp256k1_ge *r, const secp256k1_ge *a) {
+    secp256k1_ge_verify(a);
     *r = *a;
     secp256k1_fe_normalize_weak(&r->y);
     secp256k1_fe_negate(&r->y, &r->y, 1);
+    secp256k1_ge_verify(r);
 }
 
 static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) {
     secp256k1_fe z2, z3;
+    secp256k1_gej_verify(a);
     r->infinity = a->infinity;
     secp256k1_fe_inv(&a->z, &a->z);
     secp256k1_fe_sqr(&z2, &a->z);
@@ -97,14 +126,17 @@ static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) {
     secp256k1_fe_set_int(&a->z, 1);
     r->x = a->x;
     r->y = a->y;
+    secp256k1_ge_verify(r);
 }
 
 static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a) {
     secp256k1_fe z2, z3;
-    r->infinity = a->infinity;
-    if (a->infinity) {
+    secp256k1_gej_verify(a);
+    if (secp256k1_gej_is_infinity(a)) {
+        secp256k1_ge_set_infinity(r);
         return;
     }
+    r->infinity = 0;
     secp256k1_fe_inv_var(&a->z, &a->z);
     secp256k1_fe_sqr(&z2, &a->z);
     secp256k1_fe_mul(&z3, &a->z, &z2);
@@ -113,6 +145,7 @@ static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a) {
     secp256k1_fe_set_int(&a->z, 1);
     r->x = a->x;
     r->y = a->y;
+    secp256k1_ge_verify(r);
 }
 
 static void secp256k1_ge_set_all_gej_var(secp256k1_ge *r, const secp256k1_gej *a, size_t len) {
@@ -121,6 +154,7 @@ static void secp256k1_ge_set_all_gej_var(secp256k1_ge *r, const secp256k1_gej *a
     size_t last_i = SIZE_MAX;
 
     for (i = 0; i < len; i++) {
+        secp256k1_gej_verify(&a[i]);
         if (!a[i].infinity) {
             /* Use destination's x coordinates as scratch space */
             if (last_i == SIZE_MAX) {
@@ -149,10 +183,12 @@ static void secp256k1_ge_set_all_gej_var(secp256k1_ge *r, const secp256k1_gej *a
     r[last_i].x = u;
 
     for (i = 0; i < len; i++) {
-        r[i].infinity = a[i].infinity;
         if (!a[i].infinity) {
             secp256k1_ge_set_gej_zinv(&r[i], &a[i], &r[i].x);
+        } else {
+            secp256k1_ge_set_infinity(&r[i]);
         }
+        secp256k1_ge_verify(&r[i]);
     }
 }
 
@@ -161,6 +197,8 @@ static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp
     secp256k1_fe zs;
 
     if (len > 0) {
+        secp256k1_gej_verify(&a[i]);
+        secp256k1_fe_verify(&zr[i]);
         /* The z of the final point gives us the "global Z" for the table. */
         r[i].x = a[i].x;
         r[i].y = a[i].y;
@@ -168,6 +206,7 @@ static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp
         secp256k1_fe_normalize_weak(&r[i].y);
         *globalz = a[i].z;
         r[i].infinity = 0;
+        secp256k1_ge_verify(&r[i]);
         zs = zr[i];
 
         /* Work our way backwards, using the z-ratios to scale the x/y values. */
@@ -186,12 +225,14 @@ static void secp256k1_gej_set_infinity(secp256k1_gej *r) {
     secp256k1_fe_clear(&r->x);
     secp256k1_fe_clear(&r->y);
     secp256k1_fe_clear(&r->z);
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_ge_set_infinity(secp256k1_ge *r) {
     r->infinity = 1;
     secp256k1_fe_clear(&r->x);
     secp256k1_fe_clear(&r->y);
+    secp256k1_ge_verify(r);
 }
 
 static void secp256k1_gej_clear(secp256k1_gej *r) {
@@ -199,25 +240,32 @@ static void secp256k1_gej_clear(secp256k1_gej *r) {
     secp256k1_fe_clear(&r->x);
     secp256k1_fe_clear(&r->y);
     secp256k1_fe_clear(&r->z);
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_ge_clear(secp256k1_ge *r) {
     r->infinity = 0;
     secp256k1_fe_clear(&r->x);
     secp256k1_fe_clear(&r->y);
+    secp256k1_ge_verify(r);
 }
 
 static int secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe *x) {
     secp256k1_fe x2, x3;
+    int ret;
+    secp256k1_fe_verify(x);
     r->x = *x;
     secp256k1_fe_sqr(&x2, x);
     secp256k1_fe_mul(&x3, x, &x2);
     r->infinity = 0;
     secp256k1_fe_add(&x3, &secp256k1_fe_const_b);
-    return secp256k1_fe_sqrt(&r->y, &x3);
+    ret = secp256k1_fe_sqrt(&r->y, &x3);
+    secp256k1_ge_verify(r);
+    return ret;
 }
 
 static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) {
+    secp256k1_fe_verify(x);
     if (!secp256k1_ge_set_xquad(r, x)) {
         return 0;
     }
@@ -225,19 +273,24 @@ static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int o
     if (secp256k1_fe_is_odd(&r->y) != odd) {
         secp256k1_fe_negate(&r->y, &r->y, 1);
     }
+    secp256k1_ge_verify(r);
     return 1;
 
 }
 
 static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) {
+   secp256k1_ge_verify(a);
    r->infinity = a->infinity;
    r->x = a->x;
    r->y = a->y;
    secp256k1_fe_set_int(&r->z, 1);
+   secp256k1_gej_verify(r);
 }
 
 static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) {
     secp256k1_fe r, r2;
+    secp256k1_fe_verify(x);
+    secp256k1_gej_verify(a);
     VERIFY_CHECK(!a->infinity);
     secp256k1_fe_sqr(&r, &a->z); secp256k1_fe_mul(&r, &r, x);
     r2 = a->x; secp256k1_fe_normalize_weak(&r2);
@@ -245,20 +298,24 @@ static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a)
 }
 
 static void secp256k1_gej_neg(secp256k1_gej *r, const secp256k1_gej *a) {
+    secp256k1_gej_verify(a);
     r->infinity = a->infinity;
     r->x = a->x;
     r->y = a->y;
     r->z = a->z;
     secp256k1_fe_normalize_weak(&r->y);
     secp256k1_fe_negate(&r->y, &r->y, 1);
+    secp256k1_gej_verify(r);
 }
 
 static int secp256k1_gej_is_infinity(const secp256k1_gej *a) {
+    secp256k1_gej_verify(a);
     return a->infinity;
 }
 
 static int secp256k1_ge_is_valid_var(const secp256k1_ge *a) {
     secp256k1_fe y2, x3;
+    secp256k1_ge_verify(a);
     if (a->infinity) {
         return 0;
     }
@@ -279,6 +336,7 @@ static SECP256K1_INLINE void secp256k1_gej_double(secp256k1_gej *r, const secp25
      * mainly because it requires more normalizations.
      */
     secp256k1_fe t1,t2,t3,t4;
+    secp256k1_gej_verify(a);
 
     r->infinity = a->infinity;
 
@@ -302,6 +360,7 @@ static SECP256K1_INLINE void secp256k1_gej_double(secp256k1_gej *r, const secp25
     secp256k1_fe_mul(&r->y, &t1, &t3);    /* Y' = 36*X^3*Y^2 - 27*X^6 (1) */
     secp256k1_fe_negate(&t2, &t4, 2);     /* T2 = -8*Y^4 (3) */
     secp256k1_fe_add(&r->y, &t2);         /* Y' = 36*X^3*Y^2 - 27*X^6 - 8*Y^4 (4) */
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr) {
@@ -315,8 +374,9 @@ static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, s
      *  the infinity flag even though the point doubles to infinity, and the result
      *  point will be gibberish (z = 0 but infinity = 0).
      */
+    secp256k1_gej_verify(a);
     if (a->infinity) {
-        r->infinity = 1;
+        secp256k1_gej_set_infinity(r);
         if (rzr != NULL) {
             secp256k1_fe_set_int(rzr, 1);
         }
@@ -336,6 +396,8 @@ static void secp256k1_gej_add_var(secp256k1_gej *r, const secp256k1_gej *a, cons
     /* Operations: 12 mul, 4 sqr, 2 normalize, 12 mul_int/add/negate */
     secp256k1_fe z22, z12, u1, u2, s1, s2, h, i, i2, h2, h3, t;
 
+    secp256k1_gej_verify(a);
+    secp256k1_gej_verify(b);
     if (a->infinity) {
         VERIFY_CHECK(rzr == NULL);
         *r = *b;
@@ -383,11 +445,14 @@ static void secp256k1_gej_add_var(secp256k1_gej *r, const secp256k1_gej *a, cons
     secp256k1_fe_negate(&r->y, &r->x, 5); secp256k1_fe_add(&r->y, &t); secp256k1_fe_mul(&r->y, &r->y, &i);
     secp256k1_fe_mul(&h3, &h3, &s1); secp256k1_fe_negate(&h3, &h3, 1);
     secp256k1_fe_add(&r->y, &h3);
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, secp256k1_fe *rzr) {
     /* 8 mul, 3 sqr, 4 normalize, 12 mul_int/add/negate */
     secp256k1_fe z12, u1, u2, s1, s2, h, i, i2, h2, h3, t;
+    secp256k1_gej_verify(a);
+    secp256k1_ge_verify(b);
     if (a->infinity) {
         VERIFY_CHECK(rzr == NULL);
         secp256k1_gej_set_ge(r, b);
@@ -432,16 +497,20 @@ static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, c
     secp256k1_fe_negate(&r->y, &r->x, 5); secp256k1_fe_add(&r->y, &t); secp256k1_fe_mul(&r->y, &r->y, &i);
     secp256k1_fe_mul(&h3, &h3, &s1); secp256k1_fe_negate(&h3, &h3, 1);
     secp256k1_fe_add(&r->y, &h3);
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, const secp256k1_fe *bzinv) {
     /* 9 mul, 3 sqr, 4 normalize, 12 mul_int/add/negate */
     secp256k1_fe az, z12, u1, u2, s1, s2, h, i, i2, h2, h3, t;
 
+    secp256k1_gej_verify(a);
+    secp256k1_ge_verify(b);
     if (b->infinity) {
         *r = *a;
         return;
     }
+    secp256k1_fe_verify(bzinv);
     if (a->infinity) {
         secp256k1_fe bzinv2, bzinv3;
         r->infinity = b->infinity;
@@ -488,6 +557,7 @@ static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a,
     secp256k1_fe_negate(&r->y, &r->x, 5); secp256k1_fe_add(&r->y, &t); secp256k1_fe_mul(&r->y, &r->y, &i);
     secp256k1_fe_mul(&h3, &h3, &s1); secp256k1_fe_negate(&h3, &h3, 1);
     secp256k1_fe_add(&r->y, &h3);
+    secp256k1_gej_verify(r);
 }
 
 
@@ -499,6 +569,8 @@ static void secp256k1_gej_add_ge(secp256k1_gej *r, const secp256k1_gej *a, const
     int infinity, degenerate;
     VERIFY_CHECK(!b->infinity);
     VERIFY_CHECK(a->infinity == 0 || a->infinity == 1);
+    secp256k1_gej_verify(a);
+    secp256k1_ge_verify(b);
 
     /** In:
      *    Eric Brier and Marc Joye, Weierstrass Elliptic Curves and Side-Channel Attacks.
@@ -611,21 +683,26 @@ static void secp256k1_gej_add_ge(secp256k1_gej *r, const secp256k1_gej *a, const
     secp256k1_fe_cmov(&r->y, &b->y, a->infinity);
     secp256k1_fe_cmov(&r->z, &fe_1, a->infinity);
     r->infinity = infinity;
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_gej_rescale(secp256k1_gej *r, const secp256k1_fe *s) {
     /* Operations: 4 mul, 1 sqr */
     secp256k1_fe zz;
+    secp256k1_gej_verify(r);
+    secp256k1_fe_verify(s);
     VERIFY_CHECK(!secp256k1_fe_is_zero(s));
     secp256k1_fe_sqr(&zz, s);
     secp256k1_fe_mul(&r->x, &r->x, &zz);                /* r->x *= s^2 */
     secp256k1_fe_mul(&r->y, &r->y, &zz);
     secp256k1_fe_mul(&r->y, &r->y, s);                  /* r->y *= s^3 */
     secp256k1_fe_mul(&r->z, &r->z, s);                  /* r->z *= s   */
+    secp256k1_gej_verify(r);
 }
 
 static void secp256k1_ge_to_storage(secp256k1_ge_storage *r, const secp256k1_ge *a) {
     secp256k1_fe x, y;
+    secp256k1_ge_verify(a);
     VERIFY_CHECK(!a->infinity);
     x = a->x;
     secp256k1_fe_normalize(&x);
@@ -639,6 +716,7 @@ static void secp256k1_ge_from_storage(secp256k1_ge *r, const secp256k1_ge_storag
     secp256k1_fe_from_storage(&r->x, &a->x);
     secp256k1_fe_from_storage(&r->y, &a->y);
     r->infinity = 0;
+    secp256k1_ge_verify(r);
 }
 
 static SECP256K1_INLINE void secp256k1_ge_storage_cmov(secp256k1_ge_storage *r, const secp256k1_ge_storage *a, int flag) {
@@ -651,13 +729,16 @@ static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a) {
         0x7ae96a2bul, 0x657c0710ul, 0x6e64479eul, 0xac3434e9ul,
         0x9cf04975ul, 0x12f58995ul, 0xc1396c28ul, 0x719501eeul
     );
+    secp256k1_ge_verify(a);
     *r = *a;
     secp256k1_fe_mul(&r->x, &r->x, &beta);
+    secp256k1_ge_verify(r);
 }
 
 static int secp256k1_gej_has_quad_y_var(const secp256k1_gej *a) {
     secp256k1_fe yz;
 
+    secp256k1_gej_verify(a);
     if (a->infinity) {
         return 0;
     }
