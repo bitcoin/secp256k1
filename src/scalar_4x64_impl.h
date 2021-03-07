@@ -185,70 +185,55 @@ static int secp256k1_scalar_cond_negate(secp256k1_scalar *r, int flag) {
 
 /** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
 #define muladd(a,b) { \
-    uint64_t tl, th; \
-    { \
-        uint128_t t = (uint128_t)a * b; \
-        th = t >> 64;         /* at most 0xFFFFFFFFFFFFFFFE */ \
-        tl = t; \
-    } \
-    c0 += tl;                 /* overflow is handled on the next line */ \
-    th += (c0 < tl);          /* at most 0xFFFFFFFFFFFFFFFF */ \
-    c1 += th;                 /* overflow is handled on the next line */ \
-    c2 += (c1 < th);          /* never overflows by contract (verified in the next line) */ \
-    VERIFY_CHECK((c1 >= th) || (c2 != 0)); \
+    uint128_t t = (uint128_t)a * b + c0; \
+    c0 = t; \
+    t >>= 64; \
+    t += c1; \
+    c1 = t; \
+    c2 += (t >> 64); \
+    VERIFY_CHECK(c2 >= (t >> 64)); /* c2 must never overflow. */ \
 }
 
 /** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
 #define muladd_fast(a,b) { \
-    uint64_t tl, th; \
-    { \
-        uint128_t t = (uint128_t)a * b; \
-        th = t >> 64;         /* at most 0xFFFFFFFFFFFFFFFE */ \
-        tl = t; \
-    } \
-    c0 += tl;                 /* overflow is handled on the next line */ \
-    th += (c0 < tl);          /* at most 0xFFFFFFFFFFFFFFFF */ \
-    c1 += th;                 /* never overflows by contract (verified in the next line) */ \
-    VERIFY_CHECK(c1 >= th); \
+    uint128_t t = (uint128_t)a * b + c0; \
+    c0 = t; \
+    c1 += (t >> 64); \
+    VERIFY_CHECK(c1 >= (t >> 64)); /* c1 must never overflow. */ \
 }
 
 /** Add 2*a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
 #define muladd2(a,b) { \
-    uint64_t tl, th, th2, tl2; \
-    { \
-        uint128_t t = (uint128_t)a * b; \
-        th = t >> 64;               /* at most 0xFFFFFFFFFFFFFFFE */ \
-        tl = t; \
-    } \
-    th2 = th + th;                  /* at most 0xFFFFFFFFFFFFFFFE (in case th was 0x7FFFFFFFFFFFFFFF) */ \
-    c2 += (th2 < th);               /* never overflows by contract (verified the next line) */ \
-    VERIFY_CHECK((th2 >= th) || (c2 != 0)); \
-    tl2 = tl + tl;                  /* at most 0xFFFFFFFFFFFFFFFE (in case the lowest 63 bits of tl were 0x7FFFFFFFFFFFFFFF) */ \
-    th2 += (tl2 < tl);              /* at most 0xFFFFFFFFFFFFFFFF */ \
-    c0 += tl2;                      /* overflow is handled on the next line */ \
-    th2 += (c0 < tl2);              /* second overflow is handled on the next line */ \
-    c2 += (c0 < tl2) & (th2 == 0);  /* never overflows by contract (verified the next line) */ \
-    VERIFY_CHECK((c0 >= tl2) || (th2 != 0) || (c2 != 0)); \
-    c1 += th2;                      /* overflow is handled on the next line */ \
-    c2 += (c1 < th2);               /* never overflows by contract (verified the next line) */ \
-    VERIFY_CHECK((c1 >= th2) || (c2 != 0)); \
+    uint128_t t1 = (uint128_t)a * b; \
+    uint64_t t1l = t1; \
+    uint64_t t1h = t1 >> 64; \
+    uint128_t t = (uint128_t)t1l + t1l + c0; \
+    c0 = t; \
+    t >>= 64; \
+    t = t + c1 + t1h + t1h; \
+    c1 = t; \
+    c2 += (t >> 64); \
+    VERIFY_CHECK(c2 >= (t >> 64)); /* c2 must never overflow. */ \
 }
 
 /** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
 #define sumadd(a) { \
-    unsigned int over; \
-    c0 += (a);                  /* overflow is handled on the next line */ \
-    over = (c0 < (a));         \
-    c1 += over;                 /* overflow is handled on the next line */ \
-    c2 += (c1 < over);          /* never overflows by contract */ \
+    uint128_t t = (uint128_t)a + c0; \
+    c0 = t; \
+    t >>= 64; \
+    t += c1; \
+    c1 = t; \
+    c2 += (t >> 64); \
+    VERIFY_CHECK(c2 >= (t >> 64)); /* c2 must never overflow. */ \
 }
 
 /** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
 #define sumadd_fast(a) { \
-    c0 += (a);                 /* overflow is handled on the next line */ \
-    c1 += (c0 < (a));          /* never overflows by contract (verified the next line) */ \
-    VERIFY_CHECK((c1 != 0) | (c0 >= (a))); \
-    VERIFY_CHECK(c2 == 0); \
+    uint128_t t = (uint128_t)a + c0; \
+    c0 = t; \
+    c1 += (t >> 64); \
+    VERIFY_CHECK(c1 >= (t >> 64)); /* c1 must never overflow. */ \
+    VERIFY_CHECK(c2 == 0); /* c2 must be zero. */ \
 }
 
 /** Extract the lowest 64 bits of (c0,c1,c2) into n, and left shift the number 64 bits. */
