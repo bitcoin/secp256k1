@@ -3690,37 +3690,77 @@ void run_wnaf(void) {
     CHECK(secp256k1_scalar_is_zero(&n));
 }
 
+void test_ecmult_accumulate(secp256k1_sha256* acc, const secp256k1_scalar* x) {
+    /* Compute x*G in 4 different ways, serialize it uncompressed, and feed it into acc. */
+    secp256k1_gej rj1, rj2, rj3, rj4, gj, infj;
+    secp256k1_ge r;
+    const secp256k1_scalar zero = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+    unsigned char bytes[65];
+    size_t size = 65;
+    secp256k1_gej_set_ge(&gj, &secp256k1_ge_const_g);
+    secp256k1_gej_set_infinity(&infj);
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &rj1, x);
+    secp256k1_ecmult(&ctx->ecmult_ctx, &rj2, &gj, x, &zero);
+    secp256k1_ecmult(&ctx->ecmult_ctx, &rj3, &infj, &zero, x);
+    secp256k1_ecmult_const(&rj4, &secp256k1_ge_const_g, x, 256);
+    secp256k1_ge_set_gej_var(&r, &rj1);
+    ge_equals_gej(&r, &rj2);
+    ge_equals_gej(&r, &rj3);
+    ge_equals_gej(&r, &rj4);
+    if (secp256k1_ge_is_infinity(&r)) {
+        /* Store infinity as 0x00 */
+        const unsigned char zerobyte[1] = {0};
+        secp256k1_sha256_write(acc, zerobyte, 1);
+    } else {
+        /* Store other points using their uncompressed serialization. */
+        secp256k1_eckey_pubkey_serialize(&r, bytes, &size, 0);
+        CHECK(size == 65);
+        secp256k1_sha256_write(acc, bytes, size);
+    }
+}
+
 void test_ecmult_constants(void) {
-    /* Test ecmult_gen() for [0..36) and [order-36..0). */
+    /* Test ecmult_gen for:
+     * - Numbers 0..36 and their negations
+     * - Numbers 2^i (with i=0..255)
+     * - Numbers 2^i + 2^j (with i=0..255, j=i+1..255)
+     */
     secp256k1_scalar x;
-    secp256k1_gej r;
-    secp256k1_ge ng;
-    int i;
-    int j;
-    secp256k1_ge_neg(&ng, &secp256k1_ge_const_g);
-    for (i = 0; i < 36; i++ ) {
+    secp256k1_sha256 acc;
+    unsigned char b32[32];
+    int i, j;
+    /* Expected hash of all the computed points; created with an independent
+     * implementation. */
+    static const unsigned char expected32[32] = {
+        0xf4, 0x8f, 0xe4, 0xea, 0xb8, 0x42, 0x43, 0x89,
+        0xb1, 0x8b, 0x92, 0x4d, 0xdb, 0x2d, 0x63, 0x3c,
+        0x10, 0x7d, 0x4a, 0x37, 0xff, 0x35, 0x42, 0x7f,
+        0x2e, 0x07, 0x1b, 0xec, 0xf0, 0x72, 0x15, 0xd9
+    };
+    secp256k1_sha256_initialize(&acc);
+    for (i = 0; i <= 36; ++i) {
         secp256k1_scalar_set_int(&x, i);
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &r, &x);
-        for (j = 0; j < i; j++) {
-            if (j == i - 1) {
-                ge_equals_gej(&secp256k1_ge_const_g, &r);
-            }
-            secp256k1_gej_add_ge(&r, &r, &ng);
-        }
-        CHECK(secp256k1_gej_is_infinity(&r));
-    }
-    for (i = 1; i <= 36; i++ ) {
-        secp256k1_scalar_set_int(&x, i);
+        test_ecmult_accumulate(&acc, &x);
         secp256k1_scalar_negate(&x, &x);
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &r, &x);
-        for (j = 0; j < i; j++) {
-            if (j == i - 1) {
-                ge_equals_gej(&ng, &r);
-            }
-            secp256k1_gej_add_ge(&r, &r, &secp256k1_ge_const_g);
-        }
-        CHECK(secp256k1_gej_is_infinity(&r));
+        test_ecmult_accumulate(&acc, &x);
+    };
+    for (i = 0; i < 256; ++i) {
+        memset(b32, 0, 32);
+        b32[31 - (i >> 3)] = (1 << (i & 7));
+        secp256k1_scalar_set_b32(&x, b32, NULL);
+        test_ecmult_accumulate(&acc, &x);
     }
+    for (i = 0; i < 256; ++i) {
+        for (j = i+1; j < 256; ++j) {
+            memset(b32, 0, 32);
+            b32[31 - (i >> 3)] = (1 << (i & 7));
+            b32[31 - (j >> 3)] |= (1 << (j & 7));
+            secp256k1_scalar_set_b32(&x, b32, NULL);
+            test_ecmult_accumulate(&acc, &x);
+        }
+    }
+    secp256k1_sha256_finalize(&acc, b32);
+    CHECK(secp256k1_memcmp_var(b32, expected32, 32) == 0);
 }
 
 void run_ecmult_constants(void) {
