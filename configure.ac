@@ -315,6 +315,7 @@ fi
 case $set_ecmult_gen_precision in
 2|4|8)
   AC_DEFINE_UNQUOTED(ECMULT_GEN_PREC_BITS, $set_ecmult_gen_precision, [Set ecmult gen precision bits])
+  AC_SUBST(ECMULT_GEN_PREC_BITS, $set_ecmult_gen_precision)
   ;;
 *)
   AC_MSG_ERROR(['ecmult gen precision not 2, 4, 8 or "auto"'])
@@ -351,79 +352,11 @@ if test x"$enable_valgrind" = x"yes"; then
   SECP_INCLUDES="$SECP_INCLUDES $VALGRIND_CPPFLAGS"
 fi
 
+AC_PATH_PROGS([PYTHON], [python3.6 python3.7 python3.8 python3.9 python3 python])
+
 # Handle static precomputation (after everything which modifies CFLAGS and friends)
 if test x"$use_ecmult_static_precomputation" != x"no"; then
-  if test x"$cross_compiling" = x"no"; then
-    set_precomp=yes
-    if test x"${CC_FOR_BUILD+x}${CFLAGS_FOR_BUILD+x}${CPPFLAGS_FOR_BUILD+x}${LDFLAGS_FOR_BUILD+x}" != x; then
-      AC_MSG_WARN([CC_FOR_BUILD, CFLAGS_FOR_BUILD, CPPFLAGS_FOR_BUILD, and/or LDFLAGS_FOR_BUILD is set but ignored because we are not cross-compiling.])
-    fi
-    # If we're not cross-compiling, simply use the same compiler for building the static precompation code.
-    CC_FOR_BUILD="$CC"
-    CFLAGS_FOR_BUILD="$CFLAGS"
-    CPPFLAGS_FOR_BUILD="$CPPFLAGS"
-    LDFLAGS_FOR_BUILD="$LDFLAGS"
-  else
-    AX_PROG_CC_FOR_BUILD
-
-    # Temporarily switch to an environment for the native compiler
-    save_cross_compiling=$cross_compiling
-    cross_compiling=no
-    SAVE_CC="$CC"
-    CC="$CC_FOR_BUILD"
-    SAVE_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS_FOR_BUILD"
-    SAVE_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS_FOR_BUILD"
-    SAVE_LDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS_FOR_BUILD"
-
-    warn_CFLAGS_FOR_BUILD="-Wall -Wextra -Wno-unused-function"
-    saved_CFLAGS="$CFLAGS"
-    CFLAGS="$warn_CFLAGS_FOR_BUILD $CFLAGS"
-    AC_MSG_CHECKING([if native ${CC_FOR_BUILD} supports ${warn_CFLAGS_FOR_BUILD}])
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[char foo;]])],
-        [ AC_MSG_RESULT([yes]) ],
-        [ AC_MSG_RESULT([no])
-          CFLAGS="$saved_CFLAGS"
-        ])
-
-    AC_MSG_CHECKING([for working native compiler: ${CC_FOR_BUILD}])
-    AC_RUN_IFELSE(
-      [AC_LANG_PROGRAM([], [])],
-      [working_native_cc=yes],
-      [working_native_cc=no],[:])
-
-    CFLAGS_FOR_BUILD="$CFLAGS"
-
-    # Restore the environment
-    cross_compiling=$save_cross_compiling
-    CC="$SAVE_CC"
-    CFLAGS="$SAVE_CFLAGS"
-    CPPFLAGS="$SAVE_CPPFLAGS"
-    LDFLAGS="$SAVE_LDFLAGS"
-
-    if test x"$working_native_cc" = x"no"; then
-      AC_MSG_RESULT([no])
-      set_precomp=no
-      m4_define([please_set_for_build], [Please set CC_FOR_BUILD, CFLAGS_FOR_BUILD, CPPFLAGS_FOR_BUILD, and/or LDFLAGS_FOR_BUILD.])
-      if test x"$use_ecmult_static_precomputation" = x"yes";  then
-        AC_MSG_ERROR([native compiler ${CC_FOR_BUILD} does not produce working binaries. please_set_for_build])
-      else
-        AC_MSG_WARN([Disabling statically generated ecmult table because the native compiler ${CC_FOR_BUILD} does not produce working binaries. please_set_for_build])
-      fi
-    else
-      AC_MSG_RESULT([yes])
-      set_precomp=yes
-    fi
-  fi
-
-  AC_SUBST(CC_FOR_BUILD)
-  AC_SUBST(CFLAGS_FOR_BUILD)
-  AC_SUBST(CPPFLAGS_FOR_BUILD)
-  AC_SUBST(LDFLAGS_FOR_BUILD)
-else
-  set_precomp=no
+  set_precomp=yes
 fi
 
 if test x"$set_precomp" = x"yes"; then
