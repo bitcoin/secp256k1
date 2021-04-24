@@ -8,23 +8,40 @@
 #include "libsecp256k1-config.h"
 #endif
 
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <time.h>
-
 #include "secp256k1.c"
-#include "include/secp256k1.h"
-#include "include/secp256k1_preallocated.h"
+#include "secp256k1.h"
+#include "ecdsa_impl.h"
+#include "eckey_impl.h"
+#include "ecmult_const_impl.h"
+#include "ecmult_gen.h"
+#include "ecmult_gen_impl.h"
+#include "ecmult_impl.h"
+#include "field_impl.h"
+#include "group.h"
+#include "group_impl.h"
+#include "hash.h"
+#include "hash_impl.h"
+
+#include "scalar_impl.h"
+#include "scratch.h"
+#include "scratch_impl.h"
 #include "testrand_impl.h"
 #include "util.h"
+
 
 #ifdef ENABLE_OPENSSL_TESTS
 #include <openssl/bn.h>
 #include <openssl/ec.h>
-#include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <openssl/opensslv.h>
+#include <openssl/ossl_typ.h>
+
 # if OPENSSL_VERSION_NUMBER < 0x10100000L
 void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps) {*pr = sig->r; *ps = sig->s;}
 # endif

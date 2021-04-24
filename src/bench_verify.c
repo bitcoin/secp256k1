@@ -5,18 +5,16 @@
  ***********************************************************************/
 
 #include <stdio.h>
-#include <string.h>
 
-#include "include/secp256k1.h"
+#include "secp256k1.h"
 #include "util.h"
 #include "bench.h"
 
 #ifdef ENABLE_OPENSSL_TESTS
-#include <openssl/bn.h>
-#include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <openssl/ec.h>
+#include <openssl/ossl_typ.h>
 #endif
-
 
 typedef struct {
     secp256k1_context *ctx;

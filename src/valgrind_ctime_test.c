@@ -4,27 +4,28 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
-#include <valgrind/memcheck.h>
 #include <stdio.h>
+#include <valgrind/memcheck.h>
+#include <valgrind/valgrind.h>
 
-#include "include/secp256k1.h"
+#include "secp256k1.h"
 #include "assumptions.h"
 #include "util.h"
 
 #ifdef ENABLE_MODULE_ECDH
-# include "include/secp256k1_ecdh.h"
+# include "secp256k1_ecdh.h"
 #endif
 
 #ifdef ENABLE_MODULE_RECOVERY
-# include "include/secp256k1_recovery.h"
+# include "secp256k1_recovery.h"
 #endif
 
 #ifdef ENABLE_MODULE_EXTRAKEYS
-# include "include/secp256k1_extrakeys.h"
+# include "secp256k1_extrakeys.h"
 #endif
 
 #ifdef ENABLE_MODULE_SCHNORRSIG
-#include "include/secp256k1_schnorrsig.h"
+#include "secp256k1_schnorrsig.h"
 #endif
 
 void run_tests(secp256k1_context *ctx, unsigned char *key);

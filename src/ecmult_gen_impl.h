@@ -12,6 +12,8 @@
 #include "group.h"
 #include "ecmult_gen.h"
 #include "hash_impl.h"
+#include "field_impl.h"
+
 #ifdef USE_ECMULT_STATIC_PRECOMPUTATION
 #include "ecmult_static_context.h"
 #endif

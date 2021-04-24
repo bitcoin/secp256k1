@@ -7,8 +7,8 @@
 #ifndef SECP256K1_MODULE_EXTRAKEYS_MAIN_H
 #define SECP256K1_MODULE_EXTRAKEYS_MAIN_H
 
-#include "include/secp256k1.h"
-#include "include/secp256k1_extrakeys.h"
+#include "secp256k1.h"
+#include "secp256k1_extrakeys.h"
 
 static SECP256K1_INLINE int secp256k1_xonly_pubkey_load(const secp256k1_context* ctx, secp256k1_ge *ge, const secp256k1_xonly_pubkey *pubkey) {
     return secp256k1_pubkey_load(ctx, ge, (const secp256k1_pubkey *) pubkey);
