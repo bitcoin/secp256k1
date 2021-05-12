@@ -83,6 +83,7 @@ static void bench_verify_openssl(void* arg, int iters) {
 int main(void) {
     int i;
     secp256k1_pubkey pubkey;
+    secp256k1_seckey seckey;
     secp256k1_ecdsa_signature sig;
     bench_verify_data data;
 
@@ -97,9 +98,10 @@ int main(void) {
         data.key[i] = 33 + i;
     }
     data.siglen = 72;
-    CHECK(secp256k1_ecdsa_sign(data.ctx, &sig, data.msg, data.key, NULL, NULL));
+    CHECK(secp256k1_ec_seckey_parse_compact(data.ctx, &seckey, data.key) == 1);
+    CHECK(secp256k1_ecdsa_sign(data.ctx, &sig, data.msg, &seckey, NULL, NULL));
     CHECK(secp256k1_ecdsa_signature_serialize_der(data.ctx, data.sig, &data.siglen, &sig));
-    CHECK(secp256k1_ec_pubkey_create(data.ctx, &pubkey, data.key));
+    CHECK(secp256k1_ec_pubkey_create(data.ctx, &pubkey, &seckey));
     data.pubkeylen = 33;
     CHECK(secp256k1_ec_pubkey_serialize(data.ctx, data.pubkey, &data.pubkeylen, &pubkey, SECP256K1_EC_COMPRESSED) == 1);
 

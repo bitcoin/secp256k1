@@ -35,7 +35,9 @@ static void bench_sign_run(void* arg, int iters) {
         size_t siglen = 74;
         int j;
         secp256k1_ecdsa_signature signature;
-        CHECK(secp256k1_ecdsa_sign(data->ctx, &signature, data->msg, data->key, NULL, NULL));
+        secp256k1_seckey seckey;
+        CHECK(secp256k1_ec_seckey_parse_compact(data->ctx, &seckey, data->key) == 1);
+        CHECK(secp256k1_ecdsa_sign(data->ctx, &signature, data->msg, &seckey, NULL, NULL));
         CHECK(secp256k1_ecdsa_signature_serialize_der(data->ctx, sig, &siglen, &signature));
         for (j = 0; j < 32; j++) {
             data->msg[j] = sig[j];
