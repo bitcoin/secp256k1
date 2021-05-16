@@ -49,13 +49,11 @@ Implementation details
   * Use a much larger window for multiples of G, using precomputed multiples.
   * Use Shamir's trick to do the multiplication with the public key and the generator simultaneously.
   * Use secp256k1's efficiently-computable endomorphism to split the P multiplicand into 2 half-sized ones.
-* Point multiplication for signing
-  * Use a precomputed table of multiples of powers of 16 multiplied with the generator, so general multiplication becomes a series of additions.
+* Point multiplication for signing using Mike Hamburg's signed-digit multi-comb method (see https://eprint.iacr.org/2012/309, section 3.3)
   * Intended to be completely free of timing sidechannels for secret-key operations (on reasonable hardware/toolchains)
     * Access the table with branch-free conditional moves so memory access is uniform.
     * No data-dependent branches
   * Optional runtime blinding which attempts to frustrate differential power analysis.
-  * The precomputed tables add and eventually subtract points for which no known scalar (secret key) is known, preventing even an attacker with control over the secret key used to control the data internally.
 
 Build steps
 -----------

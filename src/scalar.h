@@ -102,4 +102,6 @@ static void secp256k1_scalar_mul_shift_var(secp256k1_scalar *r, const secp256k1_
 /** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized.*/
 static void secp256k1_scalar_cmov(secp256k1_scalar *r, const secp256k1_scalar *a, int flag);
 
+static void secp256k1_scalar_signed_recoding(uint32_t r[9], const secp256k1_scalar *a, int bits);
+
 #endif /* SECP256K1_SCALAR_H */

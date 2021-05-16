@@ -136,4 +136,28 @@ static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_sc
     secp256k1_scalar_inverse(r, x);
 }
 
+SECP256K1_INLINE static void secp256k1_scalar_signed_recoding(uint32_t r[9], const secp256k1_scalar *a, int bits) {
+    uint32_t a0 = *a, a1;
+    uint32_t mask = (a0 & 1UL) - 1UL;
+    uint64_t c;
+
+    VERIFY_CHECK(256 < bits && bits <= 288);
+
+    c  = (uint64_t)a0 + (EXHAUSTIVE_TEST_ORDER & mask);
+    a0 = (uint32_t)c; c >>= 32;
+    a1 = (uint32_t)c;
+    VERIFY_CHECK(a0 & 1UL);
+    VERIFY_CHECK(a1 < 2UL);
+
+    r[0] = (a0 >> 1) | (a1 << 31);
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = 0;
+    r[6] = 0;
+    r[7] = 0;
+    r[8] = 1UL << (bits - 257);
+}
+
 #endif /* SECP256K1_SCALAR_REPR_IMPL_H */

@@ -179,13 +179,21 @@ AC_ARG_WITH([ecmult-window], [AS_HELP_STRING([--with-ecmult-window=SIZE|auto],
 )],
 [req_ecmult_window=$withval], [req_ecmult_window=auto])
 
-AC_ARG_WITH([ecmult-gen-precision], [AS_HELP_STRING([--with-ecmult-gen-precision=2|4|8|auto],
-[Precision bits to tune the precomputed table size for signing.]
-[The size of the table is 32kB for 2 bits, 64kB for 4 bits, 512kB for 8 bits of precision.]
-[A larger table size usually results in possible faster signing.]
+AC_ARG_WITH([ecmult-gen-blocks], [AS_HELP_STRING([--with-ecmult-gen-blocks=BLOCKS|auto],
+[The number of blocks to use in the multi-comb multiplication algorithm, in the range [1..256].]
+[Larger values result in possibly better performance at the cost of a linearly larger precomputed table.]
+[There must exist a multiple of BLOCKS*TEETH that is between 256 and 288, inclusive.]
 ["auto" is a reasonable setting for desktop machines (currently 4). [default=auto]]
 )],
-[req_ecmult_gen_precision=$withval], [req_ecmult_gen_precision=auto])
+[req_ecmult_gen_blocks=$withval], [req_ecmult_gen_blocks=auto])
+
+AC_ARG_WITH([ecmult-gen-teeth], [AS_HELP_STRING([--with-ecmult-gen-teeth=TEETH|auto],
+[The number of teeth to use in the multi-comb multiplication algorithm, in the range [1..8].]
+[Larger values result in possibly better performance at the cost of an exponentially larger precomputed table.]
+[There must exist a multiple of BLOCKS*TEETH that is between 256 and 288, inclusive.]
+["auto" is a reasonable setting for desktop machines (currently 5). [default=auto]]
+)],
+[req_ecmult_gen_teeth=$withval], [req_ecmult_gen_teeth=auto])
 
 AC_ARG_WITH([valgrind], [AS_HELP_STRING([--with-valgrind=yes|no|auto],
 [Build with extra checks for running inside Valgrind [default=auto]]
@@ -305,19 +313,45 @@ case $set_ecmult_window in
   ;;
 esac
 
-# Set ecmult gen precision
-if test x"$req_ecmult_gen_precision" = x"auto"; then
-  set_ecmult_gen_precision=4
+# Set ecmult gen blocks
+if test x"$req_ecmult_gen_blocks" = x"auto"; then
+  set_ecmult_gen_blocks=4
 else
-  set_ecmult_gen_precision=$req_ecmult_gen_precision
+  set_ecmult_gen_blocks=$req_ecmult_gen_blocks
 fi
-
-case $set_ecmult_gen_precision in
-2|4|8)
-  AC_DEFINE_UNQUOTED(ECMULT_GEN_PREC_BITS, $set_ecmult_gen_precision, [Set ecmult gen precision bits])
+error_gen_blocks=['option to --with-ecmult-gen-blocks not an integer in range [1..256] or "auto"']
+case $set_ecmult_gen_blocks in
+''|*[[!0-9]]*)
+  # no valid integer
+  AC_MSG_ERROR($error_gen_blocks)
   ;;
 *)
-  AC_MSG_ERROR(['ecmult gen precision not 2, 4, 8 or "auto"'])
+  if test "$set_ecmult_gen_blocks" -lt 1 -o "$set_ecmult_gen_blocks" -gt 256 ; then
+    # not in range
+    AC_MSG_ERROR($error_gen_blocks)
+  fi
+  AC_DEFINE_UNQUOTED(COMB_BLOCKS, $set_ecmult_gen_blocks, [Set number of blocks in ecmult_gen precomputation])
+  ;;
+esac
+
+#set ecmult gen teeth
+if test x"$req_ecmult_gen_teeth" = x"auto"; then
+  set_ecmult_gen_teeth=5
+else
+  set_ecmult_gen_teeth=$req_ecmult_gen_teeth
+fi
+error_gen_teeth=['option to --with-ecmult-gen-teeth not an integer in range [1..8] or "auto"']
+case $set_ecmult_gen_teeth in
+''|*[[!0-9]]*)
+  # no valid integer
+  AC_MSG_ERROR($error_gen_teeth)
+  ;;
+*)
+  if test "$set_ecmult_gen_teeth" -lt 1 -o "$set_ecmult_gen_teeth" -gt 8 ; then
+    # not in range
+    AC_MSG_ERROR($error_gen_teeth)
+  fi
+  AC_DEFINE_UNQUOTED(COMB_TEETH, $set_ecmult_gen_teeth, [Set number of teeth in ecmult_gen precomputation])
   ;;
 esac
 
@@ -524,7 +558,8 @@ echo "  module schnorrsig       = $enable_module_schnorrsig"
 echo
 echo "  asm                     = $set_asm"
 echo "  ecmult window size      = $set_ecmult_window"
-echo "  ecmult gen prec. bits   = $set_ecmult_gen_precision"
+echo "  ecmult gen blocks       = $set_ecmult_gen_blocks"
+echo "  ecmult gen teeth        = $set_ecmult_gen_teeth"
 # Hide test-only options unless they're used.
 if test x"$set_widemul" != xauto; then
 echo "  wide multiplication     = $set_widemul"

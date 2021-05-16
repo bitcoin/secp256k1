@@ -15,7 +15,7 @@ valgrind --version || true
 ./configure \
     --enable-experimental="$EXPERIMENTAL" \
     --with-test-override-wide-multiply="$WIDEMUL" --with-asm="$ASM" \
-    --enable-ecmult-static-precomputation="$STATICPRECOMPUTATION" --with-ecmult-gen-precision="$ECMULTGENPRECISION" \
+    --enable-ecmult-static-precomputation="$STATICPRECOMPUTATION" --with-ecmult-gen-blocks="$ECMULTGENBLOCKS" --with-ecmult-gen-teeth="$ECMULTGENTEETH" \
     --enable-module-ecdh="$ECDH" --enable-module-recovery="$RECOVERY" \
     --enable-module-schnorrsig="$SCHNORRSIG" \
     --with-valgrind="$WITH_VALGRIND" \

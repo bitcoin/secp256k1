@@ -43,6 +43,13 @@ int main(int argc, char **argv) {
     int inner;
     int outer;
     FILE* fp;
+    const char *SC_FORMAT = "    SC(%uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu)";
+
+    const int blocks = COMB_BLOCKS;
+    const int points = COMB_POINTS;
+#if COMB_OFFSET
+    secp256k1_ge_storage offset;
+#endif
 
     (void)argc;
     (void)argv;
@@ -57,26 +64,34 @@ int main(int argc, char **argv) {
     fprintf(fp, "#define SECP256K1_ECMULT_STATIC_CONTEXT_H\n");
     fprintf(fp, "#include \"src/group.h\"\n");
     fprintf(fp, "#define SC SECP256K1_GE_STORAGE_CONST\n");
-    fprintf(fp, "#if ECMULT_GEN_PREC_N != %d || ECMULT_GEN_PREC_G != %d\n", ECMULT_GEN_PREC_N, ECMULT_GEN_PREC_G);
-    fprintf(fp, "   #error configuration mismatch, invalid ECMULT_GEN_PREC_N, ECMULT_GEN_PREC_G. Try deleting ecmult_static_context.h before the build.\n");
+    fprintf(fp, "#if COMB_BLOCKS != %i || COMB_TEETH != %i || COMB_SPACING != %i\n", COMB_BLOCKS, COMB_TEETH, COMB_SPACING);
+    fprintf(fp, "   #error configuration mismatch, invalid COMB_BLOCKS, COMB_TEETH, or COMB_SPACING. Try deleting ecmult_static_context.h before the build.\n");
     fprintf(fp, "#endif\n");
-    fprintf(fp, "static const secp256k1_ge_storage secp256k1_ecmult_static_context[ECMULT_GEN_PREC_N][ECMULT_GEN_PREC_G] = {\n");
 
     base = checked_malloc(&default_error_callback, SECP256K1_ECMULT_GEN_CONTEXT_PREALLOCATED_SIZE);
     prealloc = base;
     secp256k1_ecmult_gen_context_init(&ctx);
     secp256k1_ecmult_gen_context_build(&ctx, &prealloc);
-    for(outer = 0; outer != ECMULT_GEN_PREC_N; outer++) {
+
+#if COMB_OFFSET
+    secp256k1_ge_to_storage(&offset, &ctx.offset);
+    fprintf(fp, "static const secp256k1_ge_storage secp256k1_ecmult_gen_ctx_offset =\n");
+    fprintf(fp, SC_FORMAT, SECP256K1_GE_STORAGE_CONST_GET(offset));
+    fprintf(fp, ";\n");
+#endif
+
+    fprintf(fp, "static const secp256k1_ge_storage secp256k1_ecmult_gen_ctx_prec[%i][%i] = {\n", blocks, points);
+    for(outer = 0; outer != blocks; outer++) {
         fprintf(fp,"{\n");
-        for(inner = 0; inner != ECMULT_GEN_PREC_G; inner++) {
-            fprintf(fp,"    SC(%uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu, %uu)", SECP256K1_GE_STORAGE_CONST_GET((*ctx.prec)[outer][inner]));
-            if (inner != ECMULT_GEN_PREC_G - 1) {
+        for(inner = 0; inner != points; inner++) {
+            fprintf(fp, SC_FORMAT, SECP256K1_GE_STORAGE_CONST_GET((*ctx.prec)[outer][inner]));
+            if (inner != (points - 1)) {
                 fprintf(fp,",\n");
             } else {
                 fprintf(fp,"\n");
             }
         }
-        if (outer != ECMULT_GEN_PREC_N - 1) {
+        if (outer != (blocks - 1)) {
             fprintf(fp,"},\n");
         } else {
             fprintf(fp,"}\n");
