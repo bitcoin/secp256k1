@@ -275,10 +275,9 @@ SECP256K1_INLINE static void secp256k1_fe_set_int(secp256k1_fe *r, int a) {
 
 SECP256K1_INLINE static int secp256k1_fe_is_zero(const secp256k1_fe *a) {
     const uint32_t *t = a->n;
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-    secp256k1_fe_verify(a);
-#endif
+    /* No secp256k1_fe_verify is needed here, because if all limbs are 0,
+     * the representation is always valid. This also allows using this function
+     * inside VERIFY_CHECK conditions itself without side effects. */
     return (t[0] | t[1] | t[2] | t[3] | t[4] | t[5] | t[6] | t[7] | t[8] | t[9]) == 0;
 }
 
@@ -455,11 +454,7 @@ void secp256k1_fe_sqr_inner(uint32_t *r, const uint32_t *a);
 
 #else
 
-#ifdef VERIFY
 #define VERIFY_BITS(x, n) VERIFY_CHECK(((x) >> (n)) == 0)
-#else
-#define VERIFY_BITS(x, n) do { } while(0)
-#endif
 
 SECP256K1_INLINE static void secp256k1_fe_mul_inner(uint32_t *r, const uint32_t *a, const uint32_t * SECP256K1_RESTRICT b) {
     uint64_t c, d;
@@ -1135,9 +1130,7 @@ static SECP256K1_INLINE void secp256k1_fe_storage_cmov(secp256k1_fe_storage *r, 
 }
 
 static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a) {
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-#endif
+    VERIFY_CHECK_ONLY(a->normalized);
     r->n[0] = a->n[0] | a->n[1] << 26;
     r->n[1] = a->n[1] >> 6 | a->n[2] << 20;
     r->n[2] = a->n[2] >> 12 | a->n[3] << 14;
@@ -1206,9 +1199,7 @@ static void secp256k1_fe_to_signed30(secp256k1_modinv32_signed30 *r, const secp2
     const uint64_t a0 = a->n[0], a1 = a->n[1], a2 = a->n[2], a3 = a->n[3], a4 = a->n[4],
                    a5 = a->n[5], a6 = a->n[6], a7 = a->n[7], a8 = a->n[8], a9 = a->n[9];
 
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-#endif
+    VERIFY_CHECK_ONLY(a->normalized);
 
     r->v[0] = (a0       | a1 << 26) & M30;
     r->v[1] = (a1 >>  4 | a2 << 22) & M30;

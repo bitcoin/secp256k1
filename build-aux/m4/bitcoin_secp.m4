@@ -9,6 +9,37 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 AC_MSG_RESULT([$has_64bit_asm])
 ])
 
+AC_DEFUN([SECP_CHECK_SIDE_EFFECT_FREE],[
+AC_MSG_CHECKING(whether compiler detects side effect free statements)
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+  #include <stdlib.h>
+  static int my_memcmp(const void *s1, const void *s2, size_t n) {
+    const unsigned char *p1 = s1, *p2 = s2;
+    size_t i;
+    for (i = 0; i < n; i++) {
+        int diff = p1[i] - p2[i];
+        if (diff != 0) {
+            return diff;
+        }
+    }
+    return 0;
+  }
+
+  static int side_effect_free(int val, const int* ptr) {
+      static const unsigned char foo[32] = {1,2,3};
+      if (!my_memcmp(ptr, foo, val)) return 0;
+      return (((val + 13) * ptr[0] ^ 7) * ptr[ptr[1]] / 11) * (int)ptr == 0;
+  }
+
+  extern int should_not_survive;
+  int main(int argc, char** argv) {
+      (void)(should_not_survive || side_effect_free(argc, (const int*)argv));
+      return 0;
+  }
+  ]])],[has_check_side_effect_free=yes],[has_check_side_effect_free=no])
+AC_MSG_RESULT([$has_check_side_effect_free])
+])
+
 dnl
 AC_DEFUN([SECP_OPENSSL_CHECK],[
   has_libcrypto=no

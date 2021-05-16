@@ -110,10 +110,8 @@ static void secp256k1_scalar_cadd_bit(secp256k1_scalar *r, unsigned int bit, int
     r->d[2] = t & 0xFFFFFFFFFFFFFFFFULL; t >>= 64;
     t += (uint128_t)r->d[3] + (((uint64_t)((bit >> 6) == 3)) << (bit & 0x3F));
     r->d[3] = t & 0xFFFFFFFFFFFFFFFFULL;
-#ifdef VERIFY
     VERIFY_CHECK((t >> 64) == 0);
     VERIFY_CHECK(secp256k1_scalar_check_overflow(r) == 0);
-#endif
 }
 
 static void secp256k1_scalar_set_b32(secp256k1_scalar *r, const unsigned char *b32, int *overflow) {
@@ -808,18 +806,14 @@ static void secp256k1_scalar_from_signed62(secp256k1_scalar *r, const secp256k1_
     r->d[2] = a2 >> 4 | a3 << 58;
     r->d[3] = a3 >> 6 | a4 << 56;
 
-#ifdef VERIFY
     VERIFY_CHECK(secp256k1_scalar_check_overflow(r) == 0);
-#endif
 }
 
 static void secp256k1_scalar_to_signed62(secp256k1_modinv64_signed62 *r, const secp256k1_scalar *a) {
     const uint64_t M62 = UINT64_MAX >> 2;
     const uint64_t a0 = a->d[0], a1 = a->d[1], a2 = a->d[2], a3 = a->d[3];
 
-#ifdef VERIFY
     VERIFY_CHECK(secp256k1_scalar_check_overflow(a) == 0);
-#endif
 
     r->v[0] =  a0                   & M62;
     r->v[1] = (a0 >> 62 | a1 <<  2) & M62;
@@ -842,9 +836,7 @@ static void secp256k1_scalar_inverse(secp256k1_scalar *r, const secp256k1_scalar
     secp256k1_modinv64(&s, &secp256k1_const_modinfo_scalar);
     secp256k1_scalar_from_signed62(r, &s);
 
-#ifdef VERIFY
-    VERIFY_CHECK(secp256k1_scalar_is_zero(r) == zero_in);
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_scalar_is_zero(r) == zero_in);
 }
 
 static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_scalar *x) {
@@ -856,9 +848,7 @@ static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_sc
     secp256k1_modinv64_var(&s, &secp256k1_const_modinfo_scalar);
     secp256k1_scalar_from_signed62(r, &s);
 
-#ifdef VERIFY
-    VERIFY_CHECK(secp256k1_scalar_is_zero(r) == zero_in);
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_scalar_is_zero(r) == zero_in);
 }
 
 SECP256K1_INLINE static int secp256k1_scalar_is_even(const secp256k1_scalar *a) {

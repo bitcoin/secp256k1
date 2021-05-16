@@ -16,6 +16,7 @@ env:
   BENCH: yes
   ITERS: 2
   MAKEFLAGS: -j2
+  CHECK_SIDE_EFFECT_FREE: yes
 
 cat_logs_snippet: &CAT_LOGS
   always:
@@ -62,7 +63,7 @@ task:
     - env: {                  STATICPRECOMPUTATION: no}
     - env: {BUILD: distcheck, WITH_VALGRIND: no, CTIMETEST: no, BENCH: no}
     - env: {CPPFLAGS: -DDETERMINISTIC}
-    - env: {CFLAGS: -O0, CTIMETEST: no}
+    - env: {CFLAGS: -O0, CTIMETEST: no, CHECK_SIDE_EFFECT_FREE: no}
     - env:
         CFLAGS:  "-fsanitize=undefined -fno-omit-frame-pointer"
         LDFLAGS: "-fsanitize=undefined -fno-omit-frame-pointer"
@@ -73,6 +74,7 @@ task:
         EXPERIMENTAL: yes
         SCHNORRSIG: yes
         CTIMETEST: no
+        CHECK_SIDE_EFFECT_FREE: auto
     - env: { ECMULTGENPRECISION: 2 }
     - env: { ECMULTGENPRECISION: 8 }
     - env:

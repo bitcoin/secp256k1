@@ -57,16 +57,38 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
 } while(0)
 #endif
 
-/* Like assert(), but when VERIFY is defined, and side-effect safe. */
-#if defined(COVERAGE)
-#define VERIFY_CHECK(check)
-#define VERIFY_SETUP(stmt)
-#elif defined(VERIFY)
-#define VERIFY_CHECK CHECK
-#define VERIFY_SETUP(stmt) do { stmt; } while(0)
+#ifdef CHECK_SIDE_EFFECT_FREE
+/* When our compiler is capable to optimizing away references to variables
+ * that control execution of a side-effect free statement, use this to
+ * check that VERIFY_CHECK conditions are safe.
+ *
+ * Credit to: https://stackoverflow.com/a/35294344 */
+extern int secp256k1_not_supposed_to_survive;
+#define ASSERT_NO_SIDE_EFFECT(cond) do { (void)(secp256k1_not_supposed_to_survive || (cond)); } while(0)
 #else
-#define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
-#define VERIFY_SETUP(stmt)
+/* If we can't use that, just run it in an unexecuted branch, to make sure it is still
+ * syntactically valid. */
+#define ASSERT_NO_SIDE_EFFECT(cond) do { if (0) { (void)(cond); } } while(0)
+#endif
+
+/* VERIFY_CHECK is like assert(), but gated by -DVERIFY, and verified for
+ * side effect-freeness under -DCHECK_SIDE_EFFECT_FREE.
+ *
+ * VERIFY_CHECK_ONLY is similar, but less safe: it has no effect outside
+ * of -DVERIFY, and thus can be used with expensive conditions, or even
+ * conditions that wouldn't compile outside -DVERIFY). */
+#if defined(COVERAGE)
+#  define VERIFY_CHECK(check)
+#  define VERIFY_CHECK_ONLY(check)
+#  define VERIFY_SETUP(stmt)
+#elif defined(VERIFY)
+#  define VERIFY_CHECK(cond) do { ASSERT_NO_SIDE_EFFECT(cond); CHECK(cond); } while (0)
+#  define VERIFY_CHECK_ONLY CHECK
+#  define VERIFY_SETUP(stmt) do { stmt; } while(0)
+#else
+#  define VERIFY_CHECK(cond) do { ASSERT_NO_SIDE_EFFECT(cond); } while (0)
+#  define VERIFY_CHECK_ONLY(cond)
+#  define VERIFY_SETUP(stmt)
 #endif
 
 /* Define `VG_UNDEF` and `VG_CHECK` when VALGRIND is defined  */

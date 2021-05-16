@@ -238,10 +238,9 @@ SECP256K1_INLINE static void secp256k1_fe_set_int(secp256k1_fe *r, int a) {
 
 SECP256K1_INLINE static int secp256k1_fe_is_zero(const secp256k1_fe *a) {
     const uint64_t *t = a->n;
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-    secp256k1_fe_verify(a);
-#endif
+    /* No secp256k1_fe_verify is needed here, because if all limbs are 0,
+     * the representation is always valid. This also allows using this function
+     * inside VERIFY_CHECK conditions itself without side effects. */
     return (t[0] | t[1] | t[2] | t[3] | t[4]) == 0;
 }
 
@@ -478,9 +477,7 @@ static SECP256K1_INLINE void secp256k1_fe_storage_cmov(secp256k1_fe_storage *r, 
 }
 
 static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a) {
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-#endif
+    VERIFY_CHECK_ONLY(a->normalized);
     r->n[0] = a->n[0] | a->n[1] << 52;
     r->n[1] = a->n[1] >> 12 | a->n[2] << 40;
     r->n[2] = a->n[2] >> 24 | a->n[3] << 28;
@@ -529,9 +526,7 @@ static void secp256k1_fe_to_signed62(secp256k1_modinv64_signed62 *r, const secp2
     const uint64_t M62 = UINT64_MAX >> 2;
     const uint64_t a0 = a->n[0], a1 = a->n[1], a2 = a->n[2], a3 = a->n[3], a4 = a->n[4];
 
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-#endif
+    VERIFY_CHECK_ONLY(a->normalized);
 
     r->v[0] = (a0       | a1 << 52) & M62;
     r->v[1] = (a1 >> 10 | a2 << 42) & M62;
@@ -555,9 +550,7 @@ static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *x) {
     secp256k1_modinv64(&s, &secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
 
-#ifdef VERIFY
     VERIFY_CHECK(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
-#endif
 }
 
 static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *x) {
@@ -570,9 +563,7 @@ static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *x) {
     secp256k1_modinv64_var(&s, &secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
 
-#ifdef VERIFY
     VERIFY_CHECK(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
-#endif
 }
 
 #endif /* SECP256K1_FIELD_REPR_IMPL_H */

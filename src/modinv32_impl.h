@@ -73,8 +73,8 @@ static void secp256k1_modinv32_normalize_30(secp256k1_modinv32_signed30 *r, int3
         VERIFY_CHECK(r->v[i] >= -M30);
         VERIFY_CHECK(r->v[i] <= M30);
     }
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, -2) > 0); /* r > -2*modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 1) < 0); /* r < modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, -2) > 0); /* r > -2*modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 1) < 0); /* r < modulus */
 #endif
 
     /* In a first step, add the modulus if the input is negative, and then negate if requested.
@@ -144,7 +144,6 @@ static void secp256k1_modinv32_normalize_30(secp256k1_modinv32_signed30 *r, int3
     r->v[7] = r7;
     r->v[8] = r8;
 
-#ifdef VERIFY
     VERIFY_CHECK(r0 >> 30 == 0);
     VERIFY_CHECK(r1 >> 30 == 0);
     VERIFY_CHECK(r2 >> 30 == 0);
@@ -154,9 +153,8 @@ static void secp256k1_modinv32_normalize_30(secp256k1_modinv32_signed30 *r, int3
     VERIFY_CHECK(r6 >> 30 == 0);
     VERIFY_CHECK(r7 >> 30 == 0);
     VERIFY_CHECK(r8 >> 30 == 0);
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 0) >= 0); /* r >= 0 */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 1) < 0); /* r < modulus */
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 0) >= 0); /* r >= 0 */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(r, 9, &modinfo->modulus, 1) < 0); /* r < modulus */
 }
 
 /* Data type for transition matrices (see section 3 of explanation).
@@ -330,16 +328,14 @@ static void secp256k1_modinv32_update_de_30(secp256k1_modinv32_signed30 *d, secp
     int32_t di, ei, md, me, sd, se;
     int64_t cd, ce;
     int i;
-#ifdef VERIFY
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, -2) > 0); /* d > -2*modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, 1) < 0);  /* d <    modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, -2) > 0); /* e > -2*modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, 1) < 0);  /* e <    modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, -2) > 0); /* d > -2*modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, 1) < 0);  /* d <    modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, -2) > 0); /* e > -2*modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, 1) < 0);  /* e <    modulus */
     VERIFY_CHECK((labs(u) + labs(v)) >= 0); /* |u|+|v| doesn't overflow */
     VERIFY_CHECK((labs(q) + labs(r)) >= 0); /* |q|+|r| doesn't overflow */
     VERIFY_CHECK((labs(u) + labs(v)) <= M30 + 1); /* |u|+|v| <= 2^30 */
     VERIFY_CHECK((labs(q) + labs(r)) <= M30 + 1); /* |q|+|r| <= 2^30 */
-#endif
     /* [md,me] start as zero; plus [u,q] if d is negative; plus [v,r] if e is negative. */
     sd = d->v[8] >> 31;
     se = e->v[8] >> 31;
@@ -374,12 +370,10 @@ static void secp256k1_modinv32_update_de_30(secp256k1_modinv32_signed30 *d, secp
     /* What remains is limb 9 of t*[d,e]+modulus*[md,me]; store it as output limb 8. */
     d->v[8] = (int32_t)cd;
     e->v[8] = (int32_t)ce;
-#ifdef VERIFY
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, -2) > 0); /* d > -2*modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, 1) < 0);  /* d <    modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, -2) > 0); /* e > -2*modulus */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, 1) < 0);  /* e <    modulus */
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, -2) > 0); /* d > -2*modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(d, 9, &modinfo->modulus, 1) < 0);  /* d <    modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, -2) > 0); /* e > -2*modulus */
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(e, 9, &modinfo->modulus, 1) < 0);  /* e <    modulus */
 }
 
 /* Compute (t/2^30) * [f, g], where t is a transition matrix for 30 divsteps.
@@ -469,35 +463,29 @@ static void secp256k1_modinv32(secp256k1_modinv32_signed30 *x, const secp256k1_m
         /* Update d,e using that transition matrix. */
         secp256k1_modinv32_update_de_30(&d, &e, &t, modinfo);
         /* Update f,g using that transition matrix. */
-#ifdef VERIFY
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) > 0); /* f > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) <= 0); /* f <= modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, -1) > 0); /* g > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, 1) < 0);  /* g <  modulus */
-#endif
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) > 0); /* f > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) <= 0); /* f <= modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, -1) > 0); /* g > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, 1) < 0);  /* g <  modulus */
         secp256k1_modinv32_update_fg_30(&f, &g, &t);
-#ifdef VERIFY
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) > 0); /* f > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) <= 0); /* f <= modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, -1) > 0); /* g > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, 1) < 0);  /* g <  modulus */
-#endif
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) > 0); /* f > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) <= 0); /* f <= modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, -1) > 0); /* g > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, 9, &modinfo->modulus, 1) < 0);  /* g <  modulus */
     }
 
     /* At this point sufficient iterations have been performed that g must have reached 0
      * and (if g was not originally 0) f must now equal +/- GCD of the initial f, g
      * values i.e. +/- 1, and d now contains +/- the modular inverse. */
-#ifdef VERIFY
     /* g == 0 */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, 9, &SECP256K1_SIGNED30_ONE, 0) == 0);
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, 9, &SECP256K1_SIGNED30_ONE, 0) == 0);
     /* |f| == 1, or (x == 0 and d == 0 and |f|=modulus) */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, 9, &SECP256K1_SIGNED30_ONE, -1) == 0 ||
-                 secp256k1_modinv32_mul_cmp_30(&f, 9, &SECP256K1_SIGNED30_ONE, 1) == 0 ||
-                 (secp256k1_modinv32_mul_cmp_30(x, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
-                  secp256k1_modinv32_mul_cmp_30(&d, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
-                  (secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) == 0 ||
-                   secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) == 0)));
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, 9, &SECP256K1_SIGNED30_ONE, -1) == 0 ||
+                      secp256k1_modinv32_mul_cmp_30(&f, 9, &SECP256K1_SIGNED30_ONE, 1) == 0 ||
+                      (secp256k1_modinv32_mul_cmp_30(x, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
+                       secp256k1_modinv32_mul_cmp_30(&d, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
+                       (secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, 1) == 0 ||
+                        secp256k1_modinv32_mul_cmp_30(&f, 9, &modinfo->modulus, -1) == 0)));
 
     /* Optionally negate d, normalize to [0,modulus), and return it. */
     secp256k1_modinv32_normalize_30(&d, f.v[8], modinfo);
@@ -526,12 +514,10 @@ static void secp256k1_modinv32_var(secp256k1_modinv32_signed30 *x, const secp256
         /* Update d,e using that transition matrix. */
         secp256k1_modinv32_update_de_30(&d, &e, &t, modinfo);
         /* Update f,g using that transition matrix. */
-#ifdef VERIFY
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) > 0); /* f > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) <= 0); /* f <= modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, -1) > 0); /* g > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, 1) < 0);  /* g <  modulus */
-#endif
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) > 0); /* f > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) <= 0); /* f <= modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, -1) > 0); /* g > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, 1) < 0);  /* g <  modulus */
         secp256k1_modinv32_update_fg_30_var(len, &f, &g, &t);
         /* If the bottom limb of g is 0, there is a chance g=0. */
         if (g.v[0] == 0) {
@@ -556,28 +542,24 @@ static void secp256k1_modinv32_var(secp256k1_modinv32_signed30 *x, const secp256
             g.v[len - 2] |= (uint32_t)gn << 30;
             --len;
         }
-#ifdef VERIFY
-        VERIFY_CHECK(++i < 25); /* We should never need more than 25*30 = 750 divsteps */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) > 0); /* f > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) <= 0); /* f <= modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, -1) > 0); /* g > -modulus */
-        VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, 1) < 0);  /* g <  modulus */
-#endif
+        VERIFY_CHECK_ONLY(++i < 25); /* We should never need more than 25*30 = 750 divsteps */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) > 0); /* f > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) <= 0); /* f <= modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, -1) > 0); /* g > -modulus */
+        VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, len, &modinfo->modulus, 1) < 0);  /* g <  modulus */
     }
 
     /* At this point g is 0 and (if g was not originally 0) f must now equal +/- GCD of
      * the initial f, g values i.e. +/- 1, and d now contains +/- the modular inverse. */
-#ifdef VERIFY
     /* g == 0 */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&g, len, &SECP256K1_SIGNED30_ONE, 0) == 0);
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&g, len, &SECP256K1_SIGNED30_ONE, 0) == 0);
     /* |f| == 1, or (x == 0 and d == 0 and |f|=modulus) */
-    VERIFY_CHECK(secp256k1_modinv32_mul_cmp_30(&f, len, &SECP256K1_SIGNED30_ONE, -1) == 0 ||
-                 secp256k1_modinv32_mul_cmp_30(&f, len, &SECP256K1_SIGNED30_ONE, 1) == 0 ||
-                 (secp256k1_modinv32_mul_cmp_30(x, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
-                  secp256k1_modinv32_mul_cmp_30(&d, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
-                  (secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) == 0 ||
-                   secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) == 0)));
-#endif
+    VERIFY_CHECK_ONLY(secp256k1_modinv32_mul_cmp_30(&f, len, &SECP256K1_SIGNED30_ONE, -1) == 0 ||
+                      secp256k1_modinv32_mul_cmp_30(&f, len, &SECP256K1_SIGNED30_ONE, 1) == 0 ||
+                      (secp256k1_modinv32_mul_cmp_30(x, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
+                       secp256k1_modinv32_mul_cmp_30(&d, 9, &SECP256K1_SIGNED30_ONE, 0) == 0 &&
+                       (secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, 1) == 0 ||
+                        secp256k1_modinv32_mul_cmp_30(&f, len, &modinfo->modulus, -1) == 0)));
 
     /* Optionally negate d, normalize to [0,modulus), and return it. */
     secp256k1_modinv32_normalize_30(&d, f.v[len - 1], modinfo);

@@ -19,6 +19,7 @@ valgrind --version || true
     --enable-module-ecdh="$ECDH" --enable-module-recovery="$RECOVERY" \
     --enable-module-schnorrsig="$SCHNORRSIG" \
     --with-valgrind="$WITH_VALGRIND" \
+    --enable-side-effect-free-check="$CHECK_SIDE_EFFECT_FREE" \
     --host="$HOST" $EXTRAFLAGS
 
 # We have set "-j<n>" in MAKEFLAGS.

@@ -164,6 +164,11 @@ AC_ARG_ENABLE(external_default_callbacks,
     [use_external_default_callbacks=$enableval],
     [use_external_default_callbacks=no])
 
+AC_ARG_ENABLE(side_effect_free_check,
+    AS_HELP_STRING([--enable-side-effect-free-check],[enable checking assertions are side-effect free (yes/no/auto) [default=no]]),
+    [use_side_effect_free_check=$enableval],
+    [use_side_effect_free_check=no])
+
 # Test-only override of the (autodetected by the C code) "widemul" setting.
 # Legal values are int64 (for [u]int64_t), int128 (for [unsigned] __int128), and auto (the default).
 AC_ARG_WITH([test-override-wide-multiply], [] ,[set_widemul=$withval], [set_widemul=auto])
@@ -219,6 +224,18 @@ else
     CFLAGS="-O2 $CFLAGS"
 fi
 
+set_check_side_effect_free=no
+if test x"$use_side_effect_free_check" != x"no"; then
+  SECP_CHECK_SIDE_EFFECT_FREE
+  if test x"$has_check_side_effect_free" = x"yes"; then
+    set_check_side_effect_free=yes
+  else
+    if test x"$use_side_effect_free_check" != x"auto"; then
+      AC_MSG_ERROR([Side effect free checking requested but not compatible with compiler])
+    fi
+  fi
+fi
+
 if test x"$req_asm" = x"auto"; then
   SECP_64BIT_ASM_CHECK
   if test x"$has_64bit_asm" = x"yes"; then
@@ -267,6 +284,16 @@ if test x"$use_external_asm" = x"yes"; then
   AC_DEFINE(USE_EXTERNAL_ASM, 1, [Define this symbol if an external (non-inline) assembly implementation is used])
 fi
 
+case $set_check_side_effect_free in
+yes)
+  AC_DEFINE(CHECK_SIDE_EFFECT_FREE, 1, [Define this symbol to enable checks for side-effect free statements])
+  ;;
+no)
+  ;;
+*)
+  AC_MSG_ERROR([invalid selection for check_side_effect_free])
+  ;;
+esac
 
 # Select wide multiplication implementation
 case $set_widemul in
