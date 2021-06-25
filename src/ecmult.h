@@ -29,20 +29,8 @@
 /** The number of entries a table with precomputed multiples needs to have. */
 #define ECMULT_TABLE_SIZE(w) (1L << ((w)-2))
 
-typedef struct {
-    /* For accelerating the computation of a*P + b*G: */
-    secp256k1_ge_storage (*pre_g)[];    /* odd multiples of the generator */
-    secp256k1_ge_storage (*pre_g_128)[]; /* odd multiples of 2^128*generator */
-} secp256k1_ecmult_context;
-
-static void secp256k1_ecmult_context_init(secp256k1_ecmult_context *ctx);
-static void secp256k1_ecmult_context_build(secp256k1_ecmult_context *ctx, void **prealloc);
-static void secp256k1_ecmult_context_finalize_memcpy(secp256k1_ecmult_context *dst, const secp256k1_ecmult_context *src);
-static void secp256k1_ecmult_context_clear(secp256k1_ecmult_context *ctx);
-static int secp256k1_ecmult_context_is_built(const secp256k1_ecmult_context *ctx);
-
 /** Double multiply: R = na*A + ng*G */
-static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng);
+static void secp256k1_ecmult(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng);
 
 typedef int (secp256k1_ecmult_multi_callback)(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *data);
 
@@ -57,6 +45,6 @@ typedef int (secp256k1_ecmult_multi_callback)(secp256k1_scalar *sc, secp256k1_ge
  *          0 if there is not enough scratch space for a single point or
  *          callback returns 0
  */
-static int secp256k1_ecmult_multi_var(const secp256k1_callback* error_callback, const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n);
+static int secp256k1_ecmult_multi_var(const secp256k1_callback* error_callback, secp256k1_scratch *scratch, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n);
 
 #endif /* SECP256K1_ECMULT_H */

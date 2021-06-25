@@ -216,7 +216,6 @@ int secp256k1_schnorrsig_verify(const secp256k1_context* ctx, const unsigned cha
     int overflow;
 
     VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(msg != NULL || msglen == 0);
     ARG_CHECK(pubkey != NULL);
@@ -241,7 +240,7 @@ int secp256k1_schnorrsig_verify(const secp256k1_context* ctx, const unsigned cha
     /* Compute rj =  s*G + (-e)*pkj */
     secp256k1_scalar_negate(&e, &e);
     secp256k1_gej_set_ge(&pkj, &pk);
-    secp256k1_ecmult(&ctx->ecmult_ctx, &rj, &pkj, &e, &s);
+    secp256k1_ecmult(&rj, &pkj, &e, &s);
 
     secp256k1_ge_set_gej_var(&r, &rj);
     if (secp256k1_ge_is_infinity(&r)) {
