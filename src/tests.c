@@ -3416,6 +3416,74 @@ void run_group_decompress(void) {
 
 /***** ECMULT TESTS *****/
 
+void test_pre_g_table(const secp256k1_ge_storage * pre_g, size_t n) {
+    secp256k1_gej g2;
+    secp256k1_ge p, q, gg;
+    secp256k1_fe dpx, dpy, dqx, dqy;
+    size_t i;
+
+    CHECK(0 < n);
+
+    secp256k1_ge_from_storage(&p, &pre_g[0]);
+    secp256k1_fe_verify(&p.x);
+    secp256k1_fe_verify(&p.y);
+    CHECK(secp256k1_ge_is_valid_var(&p));
+
+    secp256k1_gej_set_ge(&g2, &p);
+    secp256k1_gej_double_var(&g2, &g2, NULL);
+    secp256k1_ge_set_gej_var(&gg, &g2);
+    for (i = 1; i < n; ++i) {
+        secp256k1_fe_negate(&dpx, &p.x, 1); secp256k1_fe_add(&dpx, &gg.x); secp256k1_fe_normalize_weak(&dpx);
+        secp256k1_fe_negate(&dpy, &p.y, 1); secp256k1_fe_add(&dpy, &gg.y); secp256k1_fe_normalize_weak(&dpy);
+        /* Check that p is not equal to gg */
+        CHECK(!secp256k1_fe_normalizes_to_zero_var(&dpx) || !secp256k1_fe_normalizes_to_zero_var(&dpy));
+
+        secp256k1_ge_from_storage(&q, &pre_g[i]);
+        secp256k1_fe_verify(&q.x);
+        secp256k1_fe_verify(&q.y);
+        CHECK(secp256k1_ge_is_valid_var(&q));
+
+        secp256k1_fe_negate(&dqx, &q.x, 1); secp256k1_fe_add(&dqx, &gg.x); secp256k1_fe_normalize_weak(&dqx);
+        dqy = q.y; secp256k1_fe_add(&dqy, &gg.y); secp256k1_fe_normalize_weak(&dqy);
+        /* Check that -q is not equal to gg */
+        CHECK(!secp256k1_fe_normalizes_to_zero_var(&dqx) || !secp256k1_fe_normalizes_to_zero_var(&dqy));
+
+        /* Check that -q is not equal to p */
+        CHECK(!secp256k1_fe_equal_var(&dpx, &dqx) || !secp256k1_fe_equal_var(&dpy, &dqy));
+
+        /* Check that p, -q and gg are colinear */
+        secp256k1_fe_mul(&dpx, &dpx, &dqy);
+        secp256k1_fe_mul(&dpy, &dpy, &dqx);
+        CHECK(secp256k1_fe_equal_var(&dpx, &dpy));
+
+        p = q;
+    }
+}
+
+void run_ecmult_pre_g(void) {
+    secp256k1_ge_storage gs;
+    secp256k1_gej gj;
+    secp256k1_ge g;
+    size_t i;
+
+    /* Check that the pre_g and pre_g_128 tables are consistent. */
+    test_pre_g_table(secp256k1_pre_g, ECMULT_TABLE_SIZE(WINDOW_G));
+    test_pre_g_table(secp256k1_pre_g_128, ECMULT_TABLE_SIZE(WINDOW_G));
+
+    /* Check the first entry from the pre_g table. */
+    secp256k1_ge_to_storage(&gs, &secp256k1_ge_const_g);
+    CHECK(secp256k1_memcmp_var(&gs, &secp256k1_pre_g[0], sizeof(gs)) == 0);
+
+    /* Check the first entry from the pre_g_128 table. */
+    secp256k1_gej_set_ge(&gj, &secp256k1_ge_const_g);
+    for (i = 0; i < 128; ++i) {
+      secp256k1_gej_double_var(&gj, &gj, NULL);
+    }
+    secp256k1_ge_set_gej(&g, &gj);
+    secp256k1_ge_to_storage(&gs, &g);
+    CHECK(secp256k1_memcmp_var(&gs, &secp256k1_pre_g_128[0], sizeof(gs)) == 0);
+}
+
 void run_ecmult_chain(void) {
     /* random starting point A (on the curve) */
     secp256k1_gej a = SECP256K1_GEJ_CONST(
@@ -6618,6 +6686,7 @@ int main(int argc, char **argv) {
     run_group_decompress();
 
     /* ecmult tests */
+    run_ecmult_pre_g();
     run_wnaf();
     run_point_times_order();
     run_ecmult_near_split_bound();
