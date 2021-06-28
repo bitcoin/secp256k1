@@ -44,27 +44,13 @@
 #  define WINDOW_G ECMULT_WINDOW_SIZE
 #endif
 
-/* Noone will ever need more than a window size of 24. The code might
- * be correct for larger values of ECMULT_WINDOW_SIZE but this is not
- * not tested.
- *
- * The following limitations are known, and there are probably more:
- * If WINDOW_G > 27 and size_t has 32 bits, then the code is incorrect
- * because the size of the memory object that we allocate (in bytes)
- * will not fit in a size_t.
- * If WINDOW_G > 31 and int has 32 bits, then the code is incorrect
- * because certain expressions will overflow.
- */
-#if ECMULT_WINDOW_SIZE < 2 || ECMULT_WINDOW_SIZE > 24
-#  error Set ECMULT_WINDOW_SIZE to an integer in range [2..24].
+#if ECMULT_WINDOW_SIZE < WINDOW_G
+#  error ECMULT_WINDOW_SIZE to small for WINDOW_G.
 #endif
 
 #define WNAF_BITS 128
 #define WNAF_SIZE_BITS(bits, w) (((bits) + (w) - 1) / (w))
 #define WNAF_SIZE(w) WNAF_SIZE_BITS(WNAF_BITS, w)
-
-/** The number of entries a table with precomputed multiples needs to have. */
-#define ECMULT_TABLE_SIZE(w) (1 << ((w)-2))
 
 /* The number of objects allocated on the scratch space for ecmult_multi algorithms */
 #define PIPPENGER_SCRATCH_OBJECTS 6
