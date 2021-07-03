@@ -294,4 +294,13 @@ static void secp256k1_scalar_split_lambda_verify(const secp256k1_scalar *r1, con
 #endif /* VERIFY */
 #endif /* !defined(EXHAUSTIVE_TEST_ORDER) */
 
+static void secp256k1_scalar_split_128_randomizer(secp256k1_scalar *r1, secp256k1_scalar *r2, const secp256k1_scalar *k) {
+    /* 2^127 */
+    secp256k1_scalar t = SECP256K1_SCALAR_CONST(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x80000000, 0x00000000, 0x00000000, 0x00000000);
+    secp256k1_scalar_negate(&t, &t);
+    secp256k1_scalar_split_128(r1, r2, k);
+    secp256k1_scalar_add(r1, r1, &t);
+    secp256k1_scalar_add(r2, r2, &t);
+}
+
 #endif /* SECP256K1_SCALAR_IMPL_H */

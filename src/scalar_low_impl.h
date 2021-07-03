@@ -136,4 +136,9 @@ static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_sc
     secp256k1_scalar_inverse(r, x);
 }
 
+SECP256K1_INLINE static void secp256k1_scalar_chacha20(secp256k1_scalar *r1, secp256k1_scalar *r2, const unsigned char *seed, uint64_t n) {
+    *r1 = (seed[0] + n) % EXHAUSTIVE_TEST_ORDER;
+    *r2 = (seed[1] + n) % EXHAUSTIVE_TEST_ORDER;
+}
+
 #endif /* SECP256K1_SCALAR_REPR_IMPL_H */

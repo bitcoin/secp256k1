@@ -104,6 +104,27 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_schnorrsig_verify(
     const secp256k1_xonly_pubkey *pubkey
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
+/** Verifies a set of Schnorr signatures.
+ *
+ * Returns 1 if all succeeded, 0 otherwise. In particular, returns 1 if n_sigs is 0.
+ *
+ *  Args:    ctx: a secp256k1 context object, initialized for verification.
+ *       scratch: scratch space used for the multiexponentiation
+ *  In:      sig: array of pointers to signatures, or NULL if there are no signatures
+ *         msg32: array of pointers to messages, or NULL if there are no signatures
+ *            pk: array of pointers to x-only public keys, or NULL if there are no signatures
+ *        n_sigs: number of signatures in above arrays. Must be below the
+ *                minimum of 2^31 and SIZE_MAX/2. Must be 0 if above arrays are NULL.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_schnorrsig_verify_batch(
+    const secp256k1_context* ctx,
+    secp256k1_scratch_space *scratch,
+    const unsigned char *const *sig,
+    const unsigned char *const *msg32,
+    const secp256k1_xonly_pubkey *const *pk,
+    size_t n_sigs
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
+
 #ifdef __cplusplus
 }
 #endif
