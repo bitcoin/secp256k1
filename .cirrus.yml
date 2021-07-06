@@ -278,7 +278,7 @@ task:
   container:
     dockerfile: ci/linux-debian.Dockerfile
     cpu: 1
-    memory: 1G
+    memory: 2G
   env:
     ECDH: yes
     RECOVERY: yes
