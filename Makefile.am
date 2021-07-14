@@ -74,6 +74,7 @@ endif
 libsecp256k1_la_SOURCES = src/secp256k1.c
 libsecp256k1_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(SECP_INCLUDES)
 libsecp256k1_la_LIBADD = $(SECP_LIBS) $(COMMON_LIB)
+libsecp256k1_la_LDFLAGS = -version-info $(LIB_VERSION_CURRENT):$(LIB_VERSION_REVISION):$(LIB_VERSION_AGE)
 
 if VALGRIND_ENABLED
 libsecp256k1_la_CPPFLAGS += -DVALGRIND
