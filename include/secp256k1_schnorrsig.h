@@ -120,7 +120,7 @@ SECP256K1_API int secp256k1_schnorrsig_sign(
     unsigned char *sig64,
     const unsigned char *msg32,
     const secp256k1_keypair *keypair,
-    unsigned char *aux_rand32
+    const unsigned char *aux_rand32
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
 /** Create a Schnorr signature with a more flexible API.
