@@ -112,7 +112,7 @@ static int secp256k1_der_parse_integer(secp256k1_scalar *r, const unsigned char 
     if (secp256k1_der_read_len(&rlen, sig, sigend) == 0) {
         return 0;
     }
-    if (rlen == 0 || *sig + rlen > sigend) {
+    if (rlen == 0 || rlen > (size_t)(sigend - *sig)) {
         /* Exceeds bounds or not at least length 1 (X.690-0207 8.3.1).  */
         return 0;
     }
