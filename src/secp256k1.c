@@ -771,6 +771,7 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
     secp256k1_gej Qj;
     secp256k1_ge Q;
 
+    VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(pubnonce != NULL);
     memset(pubnonce, 0, sizeof(*pubnonce));
     ARG_CHECK(n >= 1);
@@ -779,6 +780,7 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
     secp256k1_gej_set_infinity(&Qj);
 
     for (i = 0; i < n; i++) {
+        ARG_CHECK(pubnonces[i] != NULL);
         secp256k1_pubkey_load(ctx, &Q, pubnonces[i]);
         secp256k1_gej_add_ge(&Qj, &Qj, &Q);
     }

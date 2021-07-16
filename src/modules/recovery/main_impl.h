@@ -40,7 +40,7 @@ int secp256k1_ecdsa_recoverable_signature_parse_compact(const secp256k1_context*
     int ret = 1;
     int overflow = 0;
 
-    (void)ctx;
+    VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(sig != NULL);
     ARG_CHECK(input64 != NULL);
     ARG_CHECK(recid >= 0 && recid <= 3);
@@ -60,7 +60,7 @@ int secp256k1_ecdsa_recoverable_signature_parse_compact(const secp256k1_context*
 int secp256k1_ecdsa_recoverable_signature_serialize_compact(const secp256k1_context* ctx, unsigned char *output64, int *recid, const secp256k1_ecdsa_recoverable_signature* sig) {
     secp256k1_scalar r, s;
 
-    (void)ctx;
+    VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(output64 != NULL);
     ARG_CHECK(sig != NULL);
     ARG_CHECK(recid != NULL);
@@ -75,7 +75,7 @@ int secp256k1_ecdsa_recoverable_signature_convert(const secp256k1_context* ctx, 
     secp256k1_scalar r, s;
     int recid;
 
-    (void)ctx;
+    VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(sig != NULL);
     ARG_CHECK(sigin != NULL);
 
