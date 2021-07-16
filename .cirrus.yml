@@ -23,6 +23,8 @@ env:
   BENCH: yes
   BENCH_ITERS: 2
   CTIMETEST: yes
+  # Compile and run the tests
+  EXAMPLES: yes
 
 cat_logs_snippet: &CAT_LOGS
   always:

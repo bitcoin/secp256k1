@@ -10,10 +10,15 @@ tests
 exhaustive_tests
 gen_context
 valgrind_ctime_test
+ecdh_example
+ecdsa_example
+schnorr_example
 *.exe
 *.so
 *.a
 !.gitignore
+*.log
+*.trs
 
 Makefile
 configure

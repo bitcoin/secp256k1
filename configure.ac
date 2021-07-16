@@ -136,6 +136,11 @@ AC_ARG_ENABLE(exhaustive_tests,
     [use_exhaustive_tests=$enableval],
     [use_exhaustive_tests=yes])
 
+AC_ARG_ENABLE(examples,
+    AS_HELP_STRING([--enable-examples],[compile the examples [default=no]]),
+    [use_examples=$enableval],
+    [use_examples=no])
+
 AC_ARG_ENABLE(ecmult_static_precomputation,
     AS_HELP_STRING([--enable-ecmult-static-precomputation],[enable precomputed ecmult table for signing [default=auto]]),
     [use_ecmult_static_precomputation=$enableval],
@@ -495,6 +500,7 @@ AC_SUBST(SECP_CFLAGS)
 AM_CONDITIONAL([ENABLE_COVERAGE], [test x"$enable_coverage" = x"yes"])
 AM_CONDITIONAL([USE_TESTS], [test x"$use_tests" != x"no"])
 AM_CONDITIONAL([USE_EXHAUSTIVE_TESTS], [test x"$use_exhaustive_tests" != x"no"])
+AM_CONDITIONAL([USE_EXAMPLES], [test x"$use_examples" != x"no"])
 AM_CONDITIONAL([USE_BENCHMARK], [test x"$use_benchmark" = x"yes"])
 AM_CONDITIONAL([USE_ECMULT_STATIC_PRECOMPUTATION], [test x"$set_precomp" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_ECDH], [test x"$enable_module_ecdh" = x"yes"])
@@ -519,6 +525,7 @@ echo "  with benchmarks         = $use_benchmark"
 echo "  with tests              = $use_tests"
 echo "  with openssl tests      = $enable_openssl_tests"
 echo "  with coverage           = $enable_coverage"
+echo "  with examples           = $use_examples"
 echo "  module ecdh             = $enable_module_ecdh"
 echo "  module recovery         = $enable_module_recovery"
 echo "  module extrakeys        = $enable_module_extrakeys"

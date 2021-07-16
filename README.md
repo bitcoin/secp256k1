@@ -69,6 +69,13 @@ libsecp256k1 is built using autotools:
     $ make check
     $ sudo make install  # optional
 
+Usage Examples
+-----------
+  Usage Examples can be found in the [examples](examples) directory, to compile them you need configure with `--enable-examples`.
+  * [ECDSA example](examples/ecdsa.c)
+  * [Schnorr Signatures example](examples/schnorr.c)
+  * [Deriving a shared secret(ECDH) example](examples/ecdh.c)
+
 Exhaustive tests
 -----------
 
